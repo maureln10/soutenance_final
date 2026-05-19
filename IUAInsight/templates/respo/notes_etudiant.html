@@ -1,0 +1,286 @@
+{%extends 'layout.html'%}
+{% block content%}
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f8fafc;
+  color: #1a2332;
+  min-height: 100vh;
+}
+
+.btn-back {
+  display: inline-block;
+  margin-bottom: 15px;
+  text-decoration: none;
+  color: #1a2332;
+  font-weight: 500;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #1e2d3d;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(120px,1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.info-item small {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.info-item span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.badge {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge.admis     { background: #22c55e20; color: #22c55e; }
+.badge.en-cours  { background: #facc1520; color: #facc15; }
+.badge.ajourne   { background: rgba(255, 0, 0, 0.278); color: red; }
+
+.table-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.t-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  padding: 10px 15px;
+  background: #f1f5f9;
+}
+
+tbody td {
+  padding: 10px 15px;
+  font-size: 13px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.sem-title td {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 4px;
+}
+.pill.pg { background: #22c55e20; color: #22c55e; }
+.pill.pa { background: #facc1520; color: #facc15; }
+.pill.pb { background: #ef444420; color: #ef4444; }
+
+.credit-ok  { color: #22c55e; font-weight: 500; }
+.credit-nok { color: #ef4444; font-weight: 500; }
+
+.moy-cell { font-weight: 600; color: #1a2332; }
+
+tfoot td {
+  background: #f8fafc;
+  padding: 12px 15px;
+}
+
+.total-badge {
+  background: #1e2d3d;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.no-notes-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+  </style>
+</head>
+<body>
+
+<a href="{{ url_for('student') }}" class="btn-back">← Retour</a>
+
+<!-- Carte identité -->
+<div class="info-card">
+  <div class="avatar">{{ etudiant.nom[0] }}{{ etudiant.prenom[0] }}</div>
+  <div style="flex:1">
+    <div style="font-size:17px;font-weight:600;color:#1a2332">
+      {{ etudiant.nom }} <span style="font-weight:400">{{ etudiant.prenom }}</span>
+    </div>
+    <div style="font-size:13px;color:#64748b;margin-top:3px">
+      Matricule : <strong style="color:#1e2d3d">{{ etudiant.matricule }}</strong>
+    </div>
+    <div class="info-grid">
+      <div class="info-item">
+        <small>Date de naissance</small>
+        <span>{{ etudiant.annee_naissance or '—' }}</span>
+      </div>
+      {% if inscription %}
+      <div class="info-item">
+        <small>Filière</small>
+        <span>{{ inscription.filiere.nom_filiere if inscription.filiere else '—' }}</span>
+      </div>
+      <div class="info-item">
+        <small>Spécialité</small>
+        <span>{{ inscription.specialite.nom_specialite if inscription.specialite else '—' }}</span>
+      </div>
+      <div class="info-item">
+        <small>Niveau</small>
+        <span>{{ inscription.niveau.libelle if inscription.niveau else '—' }}</span>
+      </div>
+      <div class="info-item">
+        <small>Statut</small>
+        <span class="badge {% if statut == 'Admis' %}admis{% elif statut == 'En cours' %}en-cours{% else %}ajourne{% endif %}">
+          {{ statut }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px; margin-left:15px;">
+    <div style="font-size:13px; color:#64748b;">
+      Crédits validés : <strong style="color:#1a2332;">{{ credits_valides }}</strong> / {{ credits_total }}
+    </div>
+    {% if moyenne_affichee is not none %}
+    <span class="total-badge">{{ label_moyenne }} : {{ moyenne_affichee }} / 20</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Tableau des notes -->
+<div class="table-card">
+  <div class="t-header">
+    <span>Résultats</span>
+    <form method="GET" action="" class="m1">
+      <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Tous les semestres</option>
+        {% for s in semestres %}
+          <option value="{{ s.id_semestre }}"
+            {% if semestre_selected == s.id_semestre|string %}selected{% endif %}>
+            {{ s.libelle }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Matière</th>
+        <th>Notes</th>
+        <th>Crédits</th>
+        <th>Moyenne</th>
+        <th>Résultat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sem_label, matieres in resultats_par_semestre.items() %}
+        <tr class="sem-title"><td colspan="5">{{ sem_label }}</td></tr>
+
+        {% for mat in matieres %}
+          <tr>
+            <td class="mat-name">{{ mat.nom }}</td>
+            <td>
+              {% set has_notes = namespace(found=false) %}
+              {% for session_label, types in mat.notes.items() %}
+                {% for type_eval, valeur in types.items() %}
+                  {% set has_notes.found = true %}
+                  <span class="pill {% if valeur >= 12 %}pg{% elif valeur >= 10 %}pa{% else %}pb{% endif %}"
+                        title="{{ session_label }} — {{ type_eval }}">
+                    {{ type_eval }} : {{ valeur }}/20
+                  </span>
+                {% endfor %}
+              {% endfor %}
+              {% if not has_notes.found %}
+                {% if mat.moyenne is not none %}
+                  <span class="no-notes-warning">⚠ Notes non saisies</span>
+                {% else %}
+                  <span style="color:#94a3b8; font-size:12px;">—</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>{{ mat.credits }}</td>
+            <td class="moy-cell">
+              {% if mat.moyenne is not none %}{{ mat.moyenne }}/20{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if mat.credit_valide %}
+                <span class="credit-ok">Validé</span>
+              {% else %}
+                <span class="credit-nok">Non validé</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5"></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{%endblock%}

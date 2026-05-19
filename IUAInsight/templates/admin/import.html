@@ -1,0 +1,235 @@
+{% extends 'layout.html' %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+:root { --accent: #3b82f6; --text: #1e2d3d; --muted: #8da0b8; }
+body { font-family: 'Inter', sans-serif; }
+h2 { font-size: 1.4rem; font-weight: 700; color: var(--text); display: inline-block; }
+h2::after { content: ''; display: block; width: 40px; height: 3px; background: var(--accent); border-radius: 4px; margin-top: 6px; }
+.text-muted { font-size: 0.82rem; color: var(--muted) !important; margin-bottom: 24px; }
+.import-card {
+    background: white; border-radius: 14px;
+    padding: 28px; box-shadow: 0 4px 12px rgba(30,45,61,0.08);
+    margin-bottom: 20px;
+}
+.import-card h5 { font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.form-label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.form-select, .form-control {
+    border: 1.5px solid #dde5f0; border-radius: 10px;
+    font-size: 0.875rem; padding: 9px 14px;
+}
+.form-select:focus, .form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+.btn-import {
+    background: var(--accent); color: white; border: none;
+    border-radius: 10px; padding: 10px 24px;
+    font-weight: 700; font-size: 0.875rem; cursor: pointer;
+}
+.btn-import:hover { background: #2563eb; }
+.template-link {
+    font-size: 0.8rem; color: var(--accent);
+    text-decoration: none; display: inline-flex;
+    align-items: center; gap: 5px; margin-top: 8px;
+}
+.template-link:hover { text-decoration: underline; }
+.colonnes-info {
+    background: #f8fafc; border-radius: 10px;
+    padding: 14px; margin-top: 16px; font-size: 0.82rem;
+    line-height: 2;
+}
+.colonnes-info code {
+    background: #e8eef6; padding: 2px 6px;
+    border-radius: 4px; font-size: 0.78rem;
+}
+.badge-requis  { color: #ef4444; font-weight: 700; }
+.badge-option  { color: var(--muted); font-style: italic; }
+.ordre-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    font-size: 0.72rem; font-weight: 700; color: white;
+    background: var(--accent); flex-shrink: 0;
+}
+.ids-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.id-badge {
+    background: #e8eef6; border-radius: 6px;
+    padding: 2px 8px; font-size: 0.74rem; color: var(--text);
+}
+</style>
+
+<h2>Import de données</h2>
+<p class="text-muted">Importez des étudiants, inscriptions ou notes depuis un fichier Excel ou CSV</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Bandeau ordre -->
+<div class="alert alert-info d-flex align-items-center gap-3 mb-4" style="border-radius:12px; font-size:0.85rem;">
+  <i class="bi bi-info-circle-fill fs-5 flex-shrink-0"></i>
+  <div>
+    <strong>Ordre obligatoire :</strong>
+    <span class="ordre-badge ms-1">1</span> Étudiants
+    <i class="bi bi-arrow-right mx-1"></i>
+    <span class="ordre-badge">2</span> Inscriptions
+    <i class="bi bi-arrow-right mx-1"></i>
+    <span class="ordre-badge">3</span> Notes
+    <br>
+    <span style="color:var(--muted)">Les inscriptions et notes dépendent des étapes précédentes.</span>
+  </div>
+</div>
+
+<!-- Année active -->
+{% if annee_active %}
+  <div class="mb-3" style="font-size:0.83rem; color:var(--muted)">
+    Année active : <strong style="color:var(--text)">{{ annee_active.libelle }}</strong>
+    — les inscriptions et notes seront rattachées à cette année.
+  </div>
+{% else %}
+  <div class="alert alert-danger" style="border-radius:12px; font-size:0.85rem;">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    Aucune année scolaire active. Créez-en une dans
+    <a href="{{ url_for('parametrage') }}">Paramétrage</a> avant d'importer.
+  </div>
+{% endif %}
+
+<div class="row">
+
+  <!-- Formulaire -->
+  <div class="col-md-7">
+    <div class="import-card">
+      <h5><i class="bi bi-upload me-2"></i>Importer un fichier</h5>
+      <form method="POST" action="{{ url_for('import_donnees') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3">
+          <label class="form-label">Type d'import</label>
+          <select name="type_import" class="form-select" id="typeImport">
+            <option value="etudiants">① Étudiants</option>
+            <option value="inscriptions">② Inscriptions</option>
+            <option value="notes">③ Notes / Résultats</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Fichier (.xlsx ou .csv)</label>
+          <input type="file" name="fichier" class="form-control" accept=".xlsx,.csv" required>
+        </div>
+
+        <button type="submit" class="btn btn-import">
+          <i class="bi bi-upload me-1"></i> Importer
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="col-md-5">
+    <div class="import-card">
+      <h5><i class="bi bi-info-circle me-2"></i>Colonnes requises</h5>
+
+      <!-- Étudiants -->
+      <div id="info-etudiants">
+        <p style="font-size:0.85rem; color:var(--muted)">Pour importer des <strong>étudiants</strong> :</p>
+        <div class="colonnes-info">
+          <code>matricule</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>nom</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>prenom</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>genre</code> <span class="badge-option">(optionnel)</span><br>
+          <code>annee_naissance</code> <span class="badge-option">(optionnel, ex: 2001)</span><br>
+          <code>pays</code> <span class="badge-option">(optionnel, ex: Côte d'Ivoire)</span>
+        </div>
+        <a href="{{ url_for('telecharger_template', type_import='etudiants') }}" class="template-link">
+          <i class="bi bi-download"></i> Télécharger le template Excel
+        </a>
+      </div>
+
+      <!-- Inscriptions -->
+      <div id="info-inscriptions" style="display:none">
+        <p style="font-size:0.85rem; color:var(--muted)">Pour importer des <strong>inscriptions</strong> :</p>
+        <div class="colonnes-info">
+          <code>matricule</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>id_filiere</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>id_niveau</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>id_specialite</code> <span class="badge-option">(optionnel)</span><br>
+          <code>est_redoublant</code> <span class="badge-option">(optionnel, Oui / Non)</span>
+        </div>
+
+        {% if filieres %}
+          <div style="margin-top:10px; font-size:0.79rem; color:var(--muted); font-weight:600">Filières :</div>
+          <div class="ids-grid">
+            {% for f in filieres %}
+              <span class="id-badge">{{ f.id_filiere }} = {{ f.nom_filiere }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if niveaux %}
+          <div style="margin-top:8px; font-size:0.79rem; color:var(--muted); font-weight:600">Niveaux :</div>
+          <div class="ids-grid">
+            {% for n in niveaux %}
+              <span class="id-badge">{{ n.id_niveau }} = {{ n.libelle }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if specialites %}
+          <div style="margin-top:8px; font-size:0.79rem; color:var(--muted); font-weight:600">Spécialités :</div>
+          <div class="ids-grid">
+            {% for s in specialites %}
+              <span class="id-badge">{{ s.id_specialite }} = {{ s.nom_specialite }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <a href="{{ url_for('telecharger_template', type_import='inscriptions') }}" class="template-link">
+          <i class="bi bi-download"></i> Télécharger le template Excel
+        </a>
+      </div>
+
+      <!-- Notes -->
+      <div id="info-notes" style="display:none">
+        <p style="font-size:0.85rem; color:var(--muted)">Pour importer des <strong>notes</strong> :</p>
+        <div class="colonnes-info">
+          <code>matricule</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>nom_matiere</code> <span class="badge-requis">* obligatoire</span><br>
+          <code>moyenne</code> <span class="badge-requis">* obligatoire (0 à 20)</span><br>
+          <code>id_semestre</code> <span class="badge-option">(optionnel, défaut: 1)</span>
+        </div>
+
+        {% if semestres %}
+          <div style="margin-top:8px; font-size:0.79rem; color:var(--muted); font-weight:600">Semestres :</div>
+          <div class="ids-grid">
+            {% for s in semestres %}
+              <span class="id-badge">{{ s.id_semestre }} = {{ s.libelle }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <a href="{{ url_for('telecharger_template', type_import='notes') }}" class="template-link">
+          <i class="bi bi-download"></i> Télécharger le template Excel
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const infos = {
+  etudiants:    document.getElementById('info-etudiants'),
+  inscriptions: document.getElementById('info-inscriptions'),
+  notes:        document.getElementById('info-notes'),
+};
+document.getElementById('typeImport').addEventListener('change', function () {
+  Object.values(infos).forEach(el => el.style.display = 'none');
+  if (infos[this.value]) infos[this.value].style.display = 'block';
+});
+</script>
+{% endblock %}

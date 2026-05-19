@@ -1,0 +1,514 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #eef2f7;
+  min-height: 100vh;
+  color: #1e2d3d;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+}
+
+.m1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+.m1 .form-select {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 6px;
+  color: #1e2d3d;
+  background: #ffffff;
+  padding: 7px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 130px;
+}
+.m1 .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+.card {
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+}
+
+.card-header {
+  background: #ffffff !important;
+  border-bottom: 1.5px solid #e8eef6 !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  padding: 16px 22px !important;
+  position: relative;
+}
+
+.card-body { padding: 20px !important; }
+
+.table {
+  margin-bottom: 0 !important;
+  font-size: 0.85rem;
+}
+
+.table thead.table-dark th {
+  background: #1e2d3d !important;
+  color: white !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 13px 16px;
+  border: none !important;
+}
+
+.table tbody tr { transition: background 0.15s; }
+
+.table-striped tbody tr:nth-child(odd)  { background: #f7fafd !important; }
+.table-striped tbody tr:nth-child(even) { background: #ffffff !important; }
+.table tbody tr:hover > *               { background: #edf4ff !important; }
+
+.table tbody td {
+  padding: 12px 16px;
+  color: #2d4057;
+  border-bottom: 1px solid #eef2f7 !important;
+  vertical-align: middle;
+}
+
+/* ── Badges statut ── */
+.badge-statut {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-admis        { background: #dcfce7; color: #15803d; }
+.badge-echec        { background: #fee2e2; color: #b91c1c; }
+.badge-modere       { background: #fff7ed; color: #c2410c; }
+.badge-surveillance { background: #fefce8; color: #a16207; }
+
+/* ── Bouton Voir ── */
+.btn-voir {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(239,68,68,.25);
+}
+.btn-voir:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(239,68,68,.35);
+  color: #ffffff;
+}
+.btn-voir:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.card-body canvas {
+  max-height: 300px;
+  width: 100% !important;
+}
+
+.mb-3 { margin-bottom: 18px !important; }
+.mb-4 { margin-bottom: 24px !important; }
+
+.table-responsive {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.table-responsive::-webkit-scrollbar { display: none; }
+
+/* ── Toast ── */
+#toast-matieres {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 9999;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+}
+
+@media (max-width: 768px) {
+  .card-body { padding: 14px !important; }
+  .card-body canvas { max-height: 220px; }
+  .m1 { flex-direction: column; max-width: 100%; }
+  .table thead.table-dark th,
+  .table tbody td { padding: 10px 12px; }
+  #toast-matieres { right: 12px; width: calc(100vw - 24px); }
+}
+</style>
+<br>
+
+<!-- ── Toast container ── -->
+<div id="toast-matieres"></div>
+
+<div class="container-fluid">
+  <h2 class="mb-1">Tableau de Bord par Matière</h2><br><br>
+  <p class="text-muted">
+    Analyse des performances par unité d'enseignement · {{ annee_active.libelle }}
+  </p><br>
+
+  <!-- ── Graphiques ── -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          {% if filiere_mode %}Meilleures Moyennes par Filière{% else %}Moyennes par Matière{% endif %}
+        </div>
+        <div class="card-body">
+          <canvas id="avgChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Distribution des Notes</div>
+        <div class="card-body">
+          <canvas id="distChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filtres ── -->
+  <form method="GET" class="m1">
+    <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+      {% for f in filieres %}
+        <option value="{{ f.id_filiere }}"
+          {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+          {{ f.nom_filiere }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
+      {% for n in niveaux %}
+        <option value="{{ n.id_niveau }}"
+          {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
+          {{ n.libelle }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
+      {% for s in semestre %}
+        <option value="{{ s['id_semestre'] }}"
+          {% if semestre_selected == s['id_semestre'] %}selected{% endif %}>
+          {{ s['libelle'] }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <div class="mb-3">
+    <span style="font-weight:700;">Matières à échec</span>
+    <p class="text-muted">
+      {{ nb_matieres }} matière{% if nb_matieres > 1 %}s{% endif %}
+    </p>
+  </div>
+
+  <!-- ── Table ── -->
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Filière</th>
+          <th>Matière</th>
+          <th>Spécialité</th>
+          <th>Nombre d'ajournés</th>
+          <th>Professeur</th>
+          <th>Téléphone</th>
+          <th>Niveau</th>
+          <th>Taux d'échecs</th>
+          <th>Niveau de risque</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stats %}
+        <tr>
+          <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
+          <td>{{ s.filiere }}</td>
+          <td>{{ s.matiere }}</td>
+          <td>{{ s.specialite }}</td>
+          <td>{{ s.ajournes }}</td>
+          <td>{{ s.professeur }}</td>
+          <td>{{ s.telephone }}</td>
+          <td>{{ s.niveau }}</td>
+          <td style="color:#ef4444; font-weight:700;">{{ s.taux_echec }}%</td>
+
+          <!-- Niveau de risque -->
+          <td>
+            {% set niv = 'critique'     if s.taux_echec >= 60
+                    else 'modere'       if s.taux_echec >= 35
+                    else 'surveillance' if s.taux_echec >= 15
+                    else 'ok' %}
+            {% if niv == 'critique' %}
+              <span class="badge-statut badge-echec">⚠ Critique</span>
+            {% elif niv == 'modere' %}
+              <span class="badge-statut badge-modere">● Modéré</span>
+            {% elif niv == 'surveillance' %}
+              <span class="badge-statut badge-surveillance">◉ Surveillance</span>
+            {% else %}
+              <span class="badge-statut badge-admis">✓ OK</span>
+            {% endif %}
+            <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
+              <div style="width:70px; height:5px; background:#e2e8f4; border-radius:4px; overflow:hidden;">
+                <div style="width:{{ s.taux_echec }}%; height:100%; border-radius:4px;
+                  background:{% if niv == 'critique' %}#ef4444
+                             {% elif niv == 'modere' %}#f97316
+                             {% elif niv == 'surveillance' %}#eab308
+                             {% else %}#10b981{% endif %};"></div>
+              </div>
+              <span style="font-size:0.75rem; font-weight:600;
+                color:{% if niv == 'critique' %}#ef4444
+                      {% elif niv == 'modere' %}#f97316
+                      {% elif niv == 'surveillance' %}#eab308
+                      {% else %}#10b981{% endif %};">
+                {{ s.taux_echec }}%
+              </span>
+            </div>
+          </td>
+
+          <!-- Action -->
+          <td>
+    <a href="{{ url_for('ajournes_matiere', id_matiere=s['id_matiere'],
+                    filiere=filiere_selected,
+                    niveau=niveau_selected,
+                    semestre=semestre_selected) }}"
+   class="btn-voir">
+  <i class="bi bi-eye"></i> Voir
+</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="11" class="text-center text-muted" style="padding:24px;">
+            Aucune donnée trouvée
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Données JSON ── -->
+<script id="chart-data2" type="application/json">
+{
+  "moyennes": {
+    "noms":    {{ moyennes | map(attribute='nom')    | list | tojson }},
+    "valeurs": {{ moyennes | map(attribute='valeur') | list | tojson }},
+    "label":   {{ ("Meilleure moyenne /20" if filiere_mode else "Moyenne /20") | tojson }}
+  },
+  "distribution": {
+    "intervalles": {{ distribution | map(attribute='intervalle') | list | tojson }},
+    "effectifs":   {{ distribution | map(attribute='effectif')   | list | tojson }}
+  }
+}
+</script>
+
+<script type="application/json" id="toast-data">
+{
+  "nb_matieres":    {{ nb_matieres        | tojson }},
+  "total_ajournes": {{ nb_etudiants_echec | tojson }}
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size   = 12;
+  Chart.defaults.color       = '#64748b';
+
+  const data2 = JSON.parse(document.getElementById('chart-data2').textContent);
+
+  new Chart(document.getElementById('avgChart'), {
+    type: 'bar',
+    data: {
+      labels: data2.moyennes.noms,
+      datasets: [{
+        label: data2.moyennes.label,
+        data: data2.moyennes.valeurs,
+        backgroundColor: 'rgba(59,130,246,.75)',
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { display: false, beginAtZero: true, max: 20 },
+        x: { grid: { display: false }, border: { display: false } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('distChart'), {
+    type: 'bar',
+    data: {
+      labels: data2.distribution.intervalles,
+      datasets: [{
+        label: "Nombre d'étudiants",
+        data: data2.distribution.effectifs,
+        backgroundColor: 'rgba(34,197,94,.75)',
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { display: false, beginAtZero: true },
+        x: { grid: { display: false }, border: { display: false } }
+      }
+    }
+  });
+
+  /* ── Toasts ── */
+  (function () {
+    const { nb_matieres, total_ajournes } = JSON.parse(
+      document.getElementById('toast-data').textContent
+    );
+
+    if (nb_matieres === 0 && total_ajournes === 0) return;
+
+    const messages = [];
+
+    if (nb_matieres > 0) {
+      messages.push({
+        bg:     '#fef2f2',
+        border: '#ef4444',
+        color:  '#991b1b',
+        icon:   'bi-x-circle-fill',
+        label:  'Matières à échec',
+        msg:    `${nb_matieres} matière${nb_matieres > 1 ? 's' : ''} en situation d'échec détectée${nb_matieres > 1 ? 's' : ''}.`
+      });
+    }
+
+    if (total_ajournes > 0) {
+      messages.push({
+        bg:     '#fef2f2',
+        border: '#ef4444',
+        color:  '#991b1b',
+        icon:   'bi-exclamation-circle-fill',
+        label:  'Étudiants ajournés',
+        msg:    `${total_ajournes} étudiant${total_ajournes > 1 ? 's' : ''} ajourné${total_ajournes > 1 ? 's' : ''} sur ces matières.`
+      });
+    }
+
+    if (messages.length === 0) return;
+
+    const stack   = document.getElementById('toast-matieres');
+    const DISPLAY = 4000;
+    const TRANS   = 400;
+    let queue     = [...messages];
+
+    function buildToast({ bg, border, color, icon, label, msg }) {
+      const t = document.createElement('div');
+      t.style.cssText = `
+        display:flex; align-items:center; gap:12px;
+        padding:14px 18px; border-radius:10px; margin-bottom:10px;
+        font-size:0.82rem; font-family:'Inter',sans-serif;
+        background:${bg}; border-left:4px solid ${border}; color:${color};
+        box-shadow:0 4px 20px rgba(0,0,0,0.12); cursor:pointer;
+        opacity:0; transform:translateX(40px);
+        transition:opacity 0.4s ease, transform 0.4s ease;
+      `;
+      t.innerHTML = `
+        <i class="bi ${icon}" style="font-size:1.1rem;flex-shrink:0;"></i>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:0.78rem;margin-bottom:2px;">${label}</div>
+          <div style="font-size:0.76rem;opacity:0.85;line-height:1.4;">${msg}</div>
+        </div>
+        <button onclick="this.parentElement.remove()"
+          style="background:none;border:none;font-size:1rem;cursor:pointer;
+                 opacity:0.5;color:inherit;padding:0;">✕</button>
+      `;
+      t.addEventListener('click', () => t.remove());
+      return t;
+    }
+
+    function dismiss(toast) {
+      toast.style.opacity   = '0';
+      toast.style.transform = 'translateX(40px)';
+      setTimeout(() => { toast.remove(); showNext(); }, TRANS);
+    }
+
+    function showNext() {
+      if (queue.length === 0) return;
+      const toast = buildToast(queue.shift());
+      stack.appendChild(toast);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        toast.style.opacity   = '1';
+        toast.style.transform = 'translateX(0)';
+      }));
+      setTimeout(() => dismiss(toast), DISPLAY);
+    }
+
+    showNext();
+  })();
+</script>
+
+{% endblock %}

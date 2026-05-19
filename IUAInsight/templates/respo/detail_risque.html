@@ -1,0 +1,477 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #eef2f7; color: #1e2d3d; font-weight: 400; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1e2d3d;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.back-btn:hover { background: #3b82f6; color: #fff; border-color: transparent; }
+
+h2 { font-size: 1.35rem; font-weight: 600; color: #1e2d3d; }
+h2::after { content:''; display:block; width:40px; height:3px; background:#ef4444; border-radius:4px; margin-top:5px; }
+
+/* ── Carte identité ── */
+.identity-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e8edf3;
+  box-shadow: 0 1px 4px rgba(30,45,61,.06);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; font-weight: 600; color: #fff;
+  flex-shrink: 0;
+}
+.avatar.critique    { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+.avatar.modere      { background: linear-gradient(135deg,#f59e0b,#d97706); }
+.avatar.surveillance{ background: linear-gradient(135deg,#3b82f6,#2563eb); }
+.avatar.ok          { background: linear-gradient(135deg,#10b981,#059669); }
+
+.identity-info { flex: 1; min-width: 200px; }
+.identity-info h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; }
+.identity-info p  { font-size: 0.82rem; color: #8da0b8; margin: 0; font-weight: 400; }
+
+.score-big {
+  text-align: center;
+  padding: 0 20px;
+}
+.score-big .score-val {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.score-big .score-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #8da0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.score-big.critique .score-val    { color: #ef4444; }
+.score-big.modere .score-val      { color: #f59e0b; }
+.score-big.surveillance .score-val{ color: #3b82f6; }
+.score-big.ok .score-val          { color: #10b981; }
+
+.badge-risque-big {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.80rem;
+  font-weight: 500;
+  margin-top: 8px;
+}
+.badge-risque-big.critique    { background:#fee2e2; color:#b91c1c; }
+.badge-risque-big.modere      { background:#fef3c7; color:#92400e; }
+.badge-risque-big.surveillance{ background:#dbeafe; color:#1d4ed8; }
+.badge-risque-big.ok          { background:#d1fae5; color:#065f46; }
+
+/* ── Section card ── */
+.section-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e8edf3;
+  box-shadow: 0 1px 4px rgba(30,45,61,.06);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.section-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #1e2d3d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-header i { font-size: 1rem; }
+.section-body { padding: 18px 20px; }
+
+/* ── Facteurs ── */
+.facteur-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.facteur-item:last-child { border-bottom: none; }
+.facteur-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.facteur-content { flex: 1; }
+.facteur-titre { font-size: 0.85rem; font-weight: 500; margin-bottom: 3px; }
+.facteur-detail { font-size: 0.78rem; color: #64748b; font-weight: 400; }
+.facteur-poids {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* ── Matières échouées ── */
+.matiere-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 12px;
+}
+.matiere-row:last-child { border-bottom: none; }
+.matiere-nom { font-size: 0.84rem; font-weight: 400; flex: 1; }
+.matiere-moy {
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.moy-red    { background:#fee2e2; color:#b91c1c; }
+.moy-amber  { background:#fef3c7; color:#92400e; }
+.matiere-credit { font-size: 0.75rem; color: #8da0b8; white-space: nowrap; font-weight: 400; }
+
+/* ── Recommandations ── */
+.reco-item {
+  background: #fff;
+  border-radius: 0 10px 10px 0;
+  border: 1px solid #e8edf3;
+  border-left: 3px solid transparent;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(30,45,61,.05);
+}
+.reco-item:last-child { margin-bottom: 0; }
+.reco-item.critique    { border-left-color: #ef4444; }
+.reco-item.moderee     { border-left-color: #f59e0b; }
+.reco-item.info        { border-left-color: #3b82f6; }
+
+.reco-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.reco-titre {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #1e2d3d;
+  flex: 1;
+}
+.reco-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.reco-badge {
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.reco-badge.critique    { background:#fee2e2; color:#b91c1c; }
+.reco-badge.moderee     { background:#fef3c7; color:#92400e; }
+.reco-badge.info        { background:#dbeafe; color:#1d4ed8; }
+.reco-badge.neutral     { background:#f1f5f9; color:#475569; }
+
+.reco-count {
+  font-size: 0.78rem;
+  color: #8da0b8;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.reco-action-box {
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.80rem;
+  color: #1d4ed8;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.reco-item.moderee .reco-action-box {
+  background: #fffbeb;
+  color: #92400e;
+}
+.reco-item.info .reco-action-box {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* ── Barre de progression score ── */
+.score-bar-wrap { margin: 12px 0 0 0; }
+.score-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f4;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+.score-bar-fill.critique    { background: #ef4444; }
+.score-bar-fill.modere      { background: #f59e0b; }
+.score-bar-fill.surveillance{ background: #3b82f6; }
+.score-bar-fill.ok          { background: #10b981; }
+.score-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #8da0b8;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* ── Synthèse mini cards ── */
+.synth-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #eef2f7;
+  padding: 14px;
+  text-align: center;
+}
+.synth-val {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1e2d3d;
+  margin-bottom: 4px;
+}
+.synth-label {
+  font-size: 0.70rem;
+  font-weight: 500;
+  color: #8da0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+</style>
+<br>
+<div class="container-fluid">
+
+  <a href="{{ url_for('alerte') }}" class="btn-back">← Retour</a>
+  <br><br>
+
+  <h2>Détail du risque</h2><br>
+
+  <!-- Carte identité -->
+  <div class="identity-card">
+    <div class="avatar {{ risque_niv }}">
+      {{ etudiant.nom[0] }}{{ etudiant.prenom[0] }}
+    </div>
+    <div class="identity-info">
+      <h3>{{ etudiant.nom }} {{ etudiant.prenom }}</h3>
+      <p>
+        {{ etudiant.matricule }}
+        {% if inscription.filiere %} · {{ inscription.filiere.nom_filiere }}{% endif %}
+        {% if inscription.specialite %} · {{ inscription.specialite.nom_specialite }}{% endif %}
+        {% if inscription.niveau %} · {{ inscription.niveau.libelle }}{% endif %}
+      </p>
+      <p style="margin-top:4px;">
+        Statut :
+        <strong style="font-weight:500;">{{ inscription.statut_simple }}</strong>
+        {% if inscription.mention %} · Mention : <strong style="font-weight:500;">{{ inscription.mention }}</strong>{% endif %}
+      </p>
+    </div>
+
+    <div class="score-big {{ risque_niv }}">
+      <div class="score-val">{{ score_risque }}%</div>
+      <div class="score-sub">Score de risque</div>
+      <div>
+        <span class="badge-risque-big {{ risque_niv }}">
+          {% if risque_niv == 'critique' %}⚠ Critique
+          {% elif risque_niv == 'modere' %}● Modéré
+          {% elif risque_niv == 'surveillance' %}◉ Surveillance
+          {% else %}✓ OK
+          {% endif %}
+        </span>
+      </div>
+      <div class="score-bar-wrap" style="width:120px; margin:10px auto 0;">
+        <div class="score-bar-track">
+          <div class="score-bar-fill {{ risque_niv }}" style="width:{{ score_risque }}%;"></div>
+        </div>
+        <div class="score-bar-labels"><span>0</span><span>50</span><span>100</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Colonne gauche -->
+    <div class="col-md-6">
+
+      <!-- Facteurs de risque -->
+      <div class="section-card">
+        <div class="section-header">
+          <i class="bi bi-radar" style="color:#ef4444;"></i>
+          Facteurs de risque détectés
+        </div>
+        <div class="section-body" style="padding-top:8px; padding-bottom:8px;">
+          {% for f in facteurs %}
+          <div class="facteur-item">
+            <div class="facteur-icon" style="background:{{ f.bg }}; color:{{ f.couleur }};">
+              <i class="bi {{ f.icone }}"></i>
+            </div>
+            <div class="facteur-content">
+              <div class="facteur-titre">{{ f.titre }}</div>
+              <div class="facteur-detail">{{ f.detail }}</div>
+            </div>
+            {% if f.poids > 0 %}
+            <span class="facteur-poids" style="background:{{ f.bg }}; color:{{ f.couleur }};">
+              +{{ f.poids }} pts
+            </span>
+            {% else %}
+            <span class="facteur-poids" style="background:#d1fae5; color:#065f46;">
+              ✓ OK
+            </span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Matières échouées -->
+      <div class="section-card">
+        <div class="section-header">
+          <i class="bi bi-journal-x" style="color:#f59e0b;"></i>
+          Matières échouées ({{ matieres_echouees | length }})
+        </div>
+        <div class="section-body" style="padding-top:8px; padding-bottom:8px;">
+          {% if matieres_echouees %}
+            {% for mat in matieres_echouees %}
+            <div class="matiere-row">
+              <span class="matiere-nom">{{ mat.nom }}</span>
+              <span class="matiere-moy {% if mat.moyenne < 6 %}moy-red{% else %}moy-amber{% endif %}">
+                {{ mat.moyenne }}/20
+              </span>
+              <span class="matiere-credit">{{ mat.credits }} cr.</span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p style="color:#8da0b8; font-size:0.82rem; padding:8px 0;">Aucune matière échouée.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-md-6">
+
+      <!-- Synthèse chiffrée -->
+      <div class="section-card">
+        <div class="section-header">
+          <i class="bi bi-bar-chart-fill" style="color:#3b82f6;"></i>
+          Synthèse académique
+        </div>
+        <div class="section-body">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="synth-card">
+              <div class="synth-val">{{ inscription.moyenne_s1 if inscription.moyenne_s1 else '—' }}</div>
+              <div class="synth-label">Moy. S1</div>
+            </div>
+            <div class="synth-card">
+              <div class="synth-val">{{ inscription.moyenne_s2 if inscription.moyenne_s2 else '—' }}</div>
+              <div class="synth-label">Moy. S2</div>
+            </div>
+            <div class="synth-card">
+              <div class="synth-val">{{ inscription.moyenne_annuelle if inscription.moyenne_annuelle else '—' }}</div>
+              <div class="synth-label">Moy. Annuelle</div>
+            </div>
+            <div class="synth-card">
+              <div class="synth-val">
+                {{ credits_val }}<span style="font-size:0.9rem; color:#8da0b8; font-weight:400;">/{{ credits_req }}</span>
+              </div>
+              <div class="synth-label">Crédits validés</div>
+            </div>
+          </div>
+
+          <!-- Barre crédits -->
+          <div style="margin-top:16px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; font-weight:500; margin-bottom:5px; color:#1e2d3d;">
+              <span>Progression crédits</span>
+              <span style="color:#8da0b8; font-weight:400;">{{ credits_val }}/{{ credits_req }} ({{ ((credits_val / credits_req) * 100) | round | int }}%)</span>
+            </div>
+            <div style="width:100%; height:6px; background:#e2e8f4; border-radius:6px; overflow:hidden;">
+              <div style="width:{{ ((credits_val / credits_req) * 100) | round | int }}%; height:100%; border-radius:6px;
+                background:{% if (credits_val / credits_req) >= 0.75 %}#10b981{% elif (credits_val / credits_req) >= 0.50 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommandations individuelles -->
+      <div class="section-card">
+        <div class="section-header">
+          <i class="bi bi-lightbulb-fill" style="color:#f59e0b;"></i>
+          Recommandations individuelles
+        </div>
+        <div class="section-body">
+          {% for reco in recommandations_ind %}
+          <div class="reco-item {{ reco.priorite }}">
+            <div class="reco-top">
+              <div class="reco-titre">{{ reco.titre }}</div>
+              <div class="reco-badges">
+                <span class="reco-badge {{ reco.priorite }}">
+                  {% if reco.priorite == 'critique' %}Critique
+                  {% elif reco.priorite == 'moderee' %}Modéré
+                  {% else %}Info{% endif %}
+                </span>
+                {% if reco.categorie %}
+                <span class="reco-badge neutral">{{ reco.categorie }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if reco.nb_concernes %}
+            <div class="reco-count">{{ reco.nb_concernes }} étudiant(s) concerné(s) par cette action.</div>
+            {% endif %}
+            <div class="reco-action-box">{{ reco.action }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

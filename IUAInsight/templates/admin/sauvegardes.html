@@ -1,0 +1,221 @@
+{%extends 'layout.html'%}
+{%block content%}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #eef2f7;
+  --text: #1e2d3d;
+  --muted: #8da0b8;
+  --accent: #3b82f6;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-block;
+}
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: var(--muted) !important;
+}
+
+/* ── Table ── */
+.table {
+  font-size: 0.82rem;
+  margin-bottom: 0 !important;
+  border: none !important;
+}
+.table > thead.table-dark > tr > th,
+.table-dark th {
+  background: #1e2d3d !important;
+  color: white;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 12px 16px !important;
+  border: none !important;
+}
+.table tbody td {
+  padding: 12px 16px !important;
+  vertical-align: middle !important;
+  border: none !important;
+  color: #1e2d3d;
+}
+.table-striped > tbody > tr:nth-child(odd) > *  { background-color: #f8fafc !important; }
+.table-striped > tbody > tr:nth-child(even) > * { background-color: #ffffff !important; }
+.table tbody tr { transition: background 0.15s; }
+.table tbody tr:hover > * { background-color: #eff6ff !important; }
+
+/* ── Search ── */
+.search-section {
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #e5e7eb;
+}
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  max-width: 460px;
+}
+.search-bar .form-control {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: #1e2d3d;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-bar .form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+.input-group-text {
+  background-color: #3b82f6;
+  border-radius: 0 10px 10px 0 !important;
+}
+.input-group-text i { color: white; }
+
+/* ── Badges ── */
+.badge-ok    { background: #dcfce7; color: #15803d; font-weight: 600; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; }
+.badge-err   { background: #fee2e2; color: #b91c1c; font-weight: 600; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; }
+.badge-auto  { background: #dbeafe; color: #1d4ed8; font-weight: 600; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; }
+
+/* ── Actions ── */
+.btn-dl {
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.btn-dl:hover { background: #16a34a; color: #fff; }
+
+.btn-del {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-del:hover { background: #dc2626; }
+</style>
+
+<!-- ── En-tête ── -->
+<h2>Historique des sauvegardes</h2>
+<p class="text-muted">Sauvegardes automatiques générées chaque dimanche à 02h00 au format ZIP/CSV.</p>
+
+<!-- ── Recherche ── -->
+<div class="search-section">
+  <form method="GET" action="{{ url_for('sauvegardes') }}" class="search-bar">
+    <div class="input-group">
+      <input type="text"
+             name="q"
+             class="form-control"
+             placeholder="Rechercher par nom de fichier"
+             value="{{ request.args.get('q', '') }}">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+    </div>
+  </form>
+</div>
+
+<!-- ── Table ── -->
+<div class="table-responsive">
+  <table class="table table-striped mb-0">
+    <thead class="table-dark">
+      <tr>
+        <th>Nom du fichier</th>
+        <th>Type</th>
+        <th>Taille</th>
+        <th>Statut</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sauvegardes %}
+      <tr>
+        <td>
+          <i class="bi bi-file-zip" style="color:#3b82f6; margin-right:6px;"></i>
+          {{ s.nom_fichier }}
+        </td>
+        <td><span class="badge-auto">Automatique</span></td>
+        <td>{{ s.taille_fichier if s.taille_fichier else 'N/A' }}</td>
+        <td>
+          {% if s.statut == 'Succès' %}
+            <span class="badge-ok"><i class="bi bi-check-circle-fill"></i> Succès</span>
+          {% else %}
+            <span class="badge-err"><i class="bi bi-x-circle-fill"></i> Échec</span>
+          {% endif %}
+        </td>
+        <td>{{ s.date_sauvegarde.strftime('%d/%m/%Y %H:%M') if s.date_sauvegarde else 'N/A' }}</td>
+        <td>
+          <div style="display:flex; gap:8px; align-items:center;">
+            {% if s.statut == 'Succès' %}
+            <a href="{{ url_for('sauvegarde_download', id_sauvegarde=s.id_sauvegarde) }}"
+               class="btn-dl">
+              <i class="bi bi-download"></i> Télécharger
+            </a>
+            {% endif %}
+            <form method="POST"
+                  action="{{ url_for('sauvegarde_delete', id_sauvegarde=s.id_sauvegarde) }}"
+                  onsubmit="return confirm('Supprimer cette sauvegarde ?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn-del">
+                <i class="bi bi-trash3"></i> Supprimer
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center text-muted py-4">
+          <i class="bi bi-inbox" style="font-size:1.5rem; display:block; margin-bottom:6px;"></i>
+          Aucune sauvegarde trouvée
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{%endblock%}

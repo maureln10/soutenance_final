@@ -1,0 +1,472 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg:           #f5f7fa;
+  --surface:      #ffffff;
+  --border:       #e4e9f2;
+  --border-hover: rgba(37,99,235,.25);
+  --accent:       #2563eb;
+  --accent-soft:  #dbeafe;
+  --text-primary: #1e293b;
+  --text-muted:   #64748b;
+  --shadow-card: 0 0 0 1px var(--border), 0 2px 8px rgba(0,0,0,.06);
+  --shadow-lift: 0 0 0 1px var(--border-hover), 0 8px 28px rgba(37,99,235,.10);
+  --ease: cubic-bezier(.4, 0, .2, 1);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+}
+/*
+.kpi-row .kpi-col:nth-child(1) .card { border-top: 4px solid #3b82f6 !important; }
+.kpi-row .kpi-col:nth-child(2) .card { border-top: 4px solid #22c55e !important; }
+.kpi-row .kpi-col:nth-child(3) .card { border-top: 4px solid skyblue !important; }
+.kpi-row .kpi-col:nth-child(4) .card { border-top: 4px solid #ef4444 !important; }
+.kpi-row .kpi-col:nth-child(5) .card { border-top: 4px solid #f59e0b !important; }*/
+
+.kpi-row .kpi-col:nth-child(1) .card h4 { color: #3b82f6; }
+.kpi-row .kpi-col:nth-child(2) .card h4 { color: #22c55e; }
+.kpi-row .kpi-col:nth-child(3) .card h4 { color: #ef4444; }
+.kpi-row .kpi-col:nth-child(4) .card h4 { color: #f59e0b; }
+
+/* ── Cards KPI taille uniforme ── */
+.card.text-center .card-body {
+  padding: 12px 8px !important;
+  min-height: 130px;        /* ← hauteur fixe identique pour toutes */
+  height: 130px;            /* ← force l'uniformité */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.card.text-center h4 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.card.text-center p {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #8da0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-align: center;
+}
+
+/* ─── Icônes KPI ─── */
+.kpi-row .card-body i {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  margin: 0 auto 4px auto;
+}
+
+.kpi-row .kpi-col:nth-child(1) .card-body i { color: #3b82f6; background: #dbeafe; } /* bleu   */
+.kpi-row .kpi-col:nth-child(2) .card-body i { color: #22c55e; background: #dcfce7; } /* vert   */
+.kpi-row .kpi-col:nth-child(3) .card-body i { color: #ef4444; background: #fee2e2; } /* rouge  */
+.kpi-row .kpi-col:nth-child(4) .card-body i { color: #f59e0b; background: #fef3c7; } /* jaune  */
+.card-header {
+  background: #ffffff !important;
+  border-bottom: 1.5px solid #e8eef6 !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  padding: 16px 22px !important;
+}
+
+.card-body { padding: 20px !important; }
+
+canvas { max-width: 100%; height: auto !important; display: block; }
+
+.shadow-sm { box-shadow: var(--shadow-card) !important; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card                                 { animation: fadeUp 320ms var(--ease) both; }
+.kpi-row .kpi-col:nth-child(1) .card { animation-delay:   0ms; }
+.kpi-row .kpi-col:nth-child(2) .card { animation-delay:  60ms; }
+.kpi-row .kpi-col:nth-child(3) .card { animation-delay: 120ms; }
+.kpi-row .kpi-col:nth-child(4) .card { animation-delay: 180ms; }
+.kpi-row .kpi-col:nth-child(5) .card { animation-delay: 240ms; }
+.col-md-6 .card                       { animation-delay: 300ms; }
+
+.m1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.m1 .form-select {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 6px;
+  color: #1e2d3d;
+  background: #ffffff;
+  padding: 7px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 130px;
+}
+
+.m1 .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+.mb-4 { margin-bottom: 24px !important; }
+
+.kpi-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+</style>
+<br>
+
+<div class="container-fluid">
+  <h2 class="mb-1">Tableau de Filière</h2><br><br>
+  <p class="text-muted">Analyse détaillée · {{ annee_active.libelle }}</p>
+
+  <!-- Filtres -->
+ <form method="GET" class="m1">
+  <!-- Filtre Semestre -->
+  <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
+    {% for s in semestre %}
+      <option value="{{ s.id_semestre }}" {% if semestre_selected == s.id_semestre|string %}selected{% endif %}>
+        {{ s.libelle }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <!-- Filtre Filière -->
+  <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+    {% for f in filieres %}
+      <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+        {{ f.nom_filiere }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <!-- Filtre Niveau -->
+  <select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
+    {% for n in niveaux %}
+      <option value="{{ n.id_niveau }}" {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
+        {{ n.libelle }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+
+
+  <!-- KPI -->
+<div class="kpi-row">
+<div class="kpi-col">
+  <div class="card text-center shadow-sm">
+    <div class="card-body">
+      <i class="bi bi-person-plus"></i>
+      <h4>{{ total }}</h4>
+      <p>Étudiants inscrits</p>
+
+      {% if semestre_selected != 'all' and total_actifs != total %}
+        <span style="font-size:0.72rem;color:#64748b;background:#f1f5f9;
+                     padding:2px 8px;border-radius:20px;display:inline-block;margin-top:2px">
+          {{ total_actifs }} actifs ce semestre
+        </span>
+      {% endif %}
+
+      {% if delta_total is not none %}
+        {% set arrow = "↑" if sens_total == "up" else "↓" if sens_total == "down" else "→" %}
+        <span style="font-size:0.7rem;font-weight:600;color:#3b82f6;background:#3b82f618;
+                     padding:2px 7px;border-radius:20px">
+          {{ arrow }} {{ delta_total | abs }}
+        </span>
+      {% endif %}
+
+      {% if annee_precedente %}
+        <span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+  <div class="kpi-col">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-bar-chart"></i>
+        <h4>{{ moyenne_generale }}/20</h4>
+        <p>Moyenne Générale</p>
+     {% if delta_moyenne is not none %}
+  {% set arrow = "↑" if sens_moyenne == "up" else "↓" if sens_moyenne == "down" else "→" %}
+  <span style="font-size:0.7rem;font-weight:600;color:#22c55e;background:#38bdf818;padding:2px 7px;border-radius:20px">
+    {{ arrow }} {{ delta_moyenne | abs }}
+  </span>
+{% endif %}
+        {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+ <div class="kpi-col">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-x-circle"></i>
+        <h4>{{ taux_echec }}%</h4>
+        <p>Taux d'échec</p>
+        {% if delta_echec is not none %}
+          {% set arrow = "↑" if sens_echec == "up" else "↓" if sens_echec == "down" else "→" %}
+          <span style="font-size:0.7rem;font-weight:600;color:#ef4444;background:#ef444418;padding:2px 7px;border-radius:20px">
+            {{ arrow }} {{ delta_echec | abs }}%
+          </span>
+        {% endif %}
+        {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-col">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-person-x"></i>
+        <h4>{{ taux_e }}%</h4>
+        <p>Taux d'abandon</p>
+    {% if delta_abandon is not none %}
+  {% set arrow = "↑" if sens_abandon == "up" else "↓" if sens_abandon == "down" else "→" %}
+  <span style="font-size:0.7rem;font-weight:600;color:#f59e0b;background:#f59e0b18;padding:2px 7px;border-radius:20px">
+    {{ arrow }} {{ delta_abandon | abs }}%
+  </span>
+{% endif %}
+        {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+  <!-- Graphiques -->
+<!-- Graphiques -->
+<div class="row">
+  <div class="col-md-6">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        Réussite par Niveau
+        {% if filiere_selected != 'all' %}
+          {% for f in filieres %}
+            {% if f.id_filiere|string == filiere_selected %}
+              · {{ f.nom_filiere }}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        ({{ annee_active.libelle }})
+      </div>
+      <div class="card-body">
+        <canvas id="niveauChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        Évolution 
+        {% if filiere_selected != 'all' %}
+          {% for f in filieres %}
+            {% if f.id_filiere|string == filiere_selected %}
+              · {{ f.nom_filiere }}
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          par Filière
+        {% endif %}
+        (sur 5 ans)
+      </div>
+      <div class="card-body">
+        <canvas id="evolutionChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Données JSON -->
+<script id="chart-data" type="application/json">
+{
+  "reussiteParNiveau":   {{ reussite_par_niveau  | tojson }},
+  "echecParNiveau":      {{ echec_par_niveau      | tojson }},
+  "evolutionParFiliere": {{ evolution_par_filiere | tojson }},
+  "annees":              {{ annees               | tojson }}
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size   = 12;
+  Chart.defaults.color       = '#64748b';
+
+  const _d                  = JSON.parse(document.getElementById('chart-data').textContent);
+  const reussiteParNiveau   = _d.reussiteParNiveau;
+  const echecParNiveau      = _d.echecParNiveau;
+  const evolutionParFiliere = _d.evolutionParFiliere;
+  const labelsAnnees        = _d.annees;
+
+  const palette = ['#3b82f6','#22c55e','#ef4444','#f59e0b','#8b5cf6','#0ea5e9'];
+
+  /* ── Graphique 1 : Réussite + Échec par Niveau ── */
+  new Chart(document.getElementById('niveauChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(reussiteParNiveau),
+      datasets: [
+        {
+          label: 'Taux de réussite',
+          data: Object.values(reussiteParNiveau),
+          backgroundColor: '#22c55e',
+          borderRadius: 6,
+          borderSkipped: false
+        },
+        {
+          label: "Taux d'échec",
+          data: Object.values(echecParNiveau),
+          backgroundColor: '#ef4444',
+          borderRadius: 6,
+          borderSkipped: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth: 10, padding: 14 }
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: '#f1f5f9' },
+          border: { display: false },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
+  });
+
+  /* ── Graphique 2 : Évolution par Filière ── */
+  const evolutionDatasets = Object.keys(evolutionParFiliere).map((filiere, i) => ({
+    label: filiere,
+    data: evolutionParFiliere[filiere],
+    borderColor: palette[i % palette.length],
+    backgroundColor: palette[i % palette.length] + '18',
+    fill: true,
+    tension: 0.4,
+    pointRadius: 4,
+    pointBackgroundColor: palette[i % palette.length],
+    borderWidth: 2.5
+  }));
+
+  new Chart(document.getElementById('evolutionChart'), {
+    type: 'line',
+    data: { labels: labelsAnnees, datasets: evolutionDatasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth: 10, padding: 14 }
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: '#f1f5f9' },
+          border: { display: false },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
+  });
+</script>
+
+{% endblock %}

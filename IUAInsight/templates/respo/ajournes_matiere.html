@@ -1,0 +1,272 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #eef2f7;
+  min-height: 100vh;
+  color: #1e2d3d;
+}
+
+/* ── Bouton retour ── */
+.btn-back {
+  display: inline-block;
+  margin-bottom: 15px;
+  text-decoration: none;
+  color: #1a2332;
+  font-weight: 500;
+}
+
+/* ── Bandeau matière ── */
+.matiere-banner {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(30,45,61,.08);
+  padding: 22px 26px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.matiere-banner .info h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  margin-bottom: 5px;
+}
+.matiere-banner .info p {
+  font-size: 0.82rem;
+  color: #8da0b8;
+}
+.matiere-banner .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── Chips meta ── */
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 13px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.chip-taux { background: #fee2e2; color: #b91c1c; }
+.chip-nb   { background: #eff6ff; color: #1d4ed8; }
+.chip-prof { background: #f1f5f9; color: #475569; }
+
+/* ── Barre d'actions ── */
+.actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.count-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e2d3d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.count-label span {
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* ── Bouton PDF ── */
+.btn-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 4px;
+  background: #ef4444;
+  color: #ffffff;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(239,68,68,.25);
+  transition: all 0.18s;
+}
+.btn-pdf:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(239,68,68,.35);
+  color: #ffffff;
+}
+.btn-pdf:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ── Table responsive ── */
+.table-responsive {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.table-responsive::-webkit-scrollbar { display: none; }
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.table thead.table-dark th {
+  background: #1e2d3d;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 13px 16px;
+  border: none;
+  white-space: nowrap;
+}
+.table tbody tr { transition: background 0.15s; }
+.table-striped tbody tr:nth-child(odd)  { background: #f7fafd; }
+.table-striped tbody tr:nth-child(even) { background: #ffffff; }
+.table tbody tr:hover td               { background: #edf4ff; }
+.table tbody td {
+  padding: 12px 16px;
+  color: #2d4057;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: middle;
+}
+
+/* ── Badge moyenne ── */
+.badge-moyenne {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 4px;
+}
+.moy-faible   { background: #fee2e2; color: #b91c1c; }
+.moy-passable { background: #fff7ed; color: #c2410c; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .matiere-banner  { flex-direction: column; }
+  .actions-bar     { flex-direction: column; align-items: flex-start; }
+  .table thead.table-dark th,
+  .table tbody td  { padding: 10px 12px; }
+}
+</style>
+
+<div class="container-fluid" style="padding: 24px 28px;">
+
+  <!-- Retour -->
+  <a href="{{ url_for('tableau_m') }}" class="btn-back">
+    <i class="bi bi-arrow-left"></i> Retour au tableau par matière
+  </a>
+
+  <!-- Bandeau matière -->
+  <div class="matiere-banner">
+    <div class="info">
+      <h3>{{ matiere.nom_matiere }}</h3>
+      <p>{{ matiere.filiere.nom_filiere if matiere.filiere else '—' }}
+         {% if annee_active %} · {{ annee_active.libelle }}{% endif %}
+      </p>
+    </div>
+    <div class="meta">
+      <span class="meta-chip chip-taux">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        Taux d'échec : {{ taux_echec }}%
+      </span>
+      <span class="meta-chip chip-nb">
+        <i class="bi bi-people-fill"></i>
+        {{ ajournes|length }} ajourné{{ 's' if ajournes|length > 1 else '' }}
+      </span>
+      {% if matiere.professeur %}
+      <span class="meta-chip chip-prof">Nom du professeur:
+        {{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Barre d'actions -->
+  <div class="actions-bar">
+    <div class="count-label">
+      Liste des ajournés
+      <span>{{ ajournes|length }} étudiant{{ 's' if ajournes|length > 1 else '' }}</span>
+    </div>
+    <a href="{{ url_for('ajournes_matiere_pdf', id_matiere=matiere.id_matiere,
+                        filiere=filiere_selected, niveau=niveau_selected,
+                        semestre=semestre_selected) }}"
+       class="btn-pdf" target="_blank">
+      <i class="bi bi-file-earmark-pdf-fill"></i>
+      Télécharger en PDF
+    </a>
+  </div>
+
+  <!-- Table -->
+  <div>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Matricule</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Filière</th>
+            <th>Spécialité</th>
+            <th>Niveau</th>
+            <th>Moyenne /20</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in ajournes %}
+          <tr>
+            <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
+            <td style="font-weight:600;">{{ a.matricule }}</td>
+            <td>{{ a.nom }}</td>
+            <td>{{ a.prenom }}</td>
+            <td>{{ a.filiere }}</td>
+            <td>{{ a.specialite }}</td>
+            <td>{{ a.niveau }}</td>
+            <td>
+              {% set cls = 'moy-faible' if a.moyenne < 5 else 'moy-passable' %}
+              <span class="badge-moyenne {{ cls }}">{{ a.moyenne }}/20</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted" style="padding:28px;">
+              Aucun ajourné trouvé pour cette matière.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

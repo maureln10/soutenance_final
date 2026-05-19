@@ -1,0 +1,294 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+body { font-family: 'Inter', sans-serif; background: #f0f4fa; color: #1a2a3a; }
+h2 { font-size: 1.4rem; font-weight: 700; color: #1e2d3d; display: inline-block; margin-bottom: 4px; }
+h2::after { content: ''; display: block; width: 40px; height: 3px; background: #3b82f6; border-radius: 4px; margin-top: 6px; }
+.card-form { background: #fff; border: 1px solid #dce6f0; border-radius: 14px; box-shadow: 0 2px 12px rgba(26,95,180,.08); padding: 22px 26px; margin-bottom: 28px; }
+label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing:.05em; color: #64748b; margin-bottom: 4px; display: block; }
+.form-control { font-family:'Inter',sans-serif !important; font-size:0.85rem !important; background:#f7fafd !important; border:1.5px solid #dde5f0 !important; padding:8px 12px !important; color:#1a2a3a; transition:border-color .2s; }
+.form-control:focus { outline:none; border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,.1) !important; background:#fff !important; }
+.form-control:disabled { background:#f1f5f9 !important; color:#94a3b8; }
+.btn-primary { background:#3b82f6 !important; border:none !important; border-radius:8px !important; font-size:0.82rem !important; font-weight:600 !important; padding:8px 20px !important; cursor:pointer; transition:background .18s; }
+.btn-primary:hover { background:#2563eb !important; }
+.btn-primary:disabled { background:#93c5fd !important; cursor:not-allowed !important; }
+.table { font-size:0.84rem; margin-bottom:0; }
+.table thead tr { background:#1e2d3d; }
+.table thead th { color:rgba(255,255,255,.75) !important; font-size:0.72rem !important; font-weight:600 !important; text-transform:uppercase !important; letter-spacing:.07em !important; border:none !important; padding:10px 14px !important; }
+.table tbody tr:nth-child(odd)  { background:#f8fafc; }
+.table tbody tr:nth-child(even) { background:#ffffff; }
+.table tbody tr:hover td { background:#eff6ff !important; }
+.table td { padding:10px 14px !important; vertical-align:middle; border-color:#e8eef6 !important; }
+.badge-active   { background:#dcfce7; color:#15803d; font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:20px; }
+.badge-inactive { background:#f1f5f9; color:#64748b;  font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:20px; }
+.search-bar .input-group .form-control { border:1.5px solid #dde5f0; border-right:none; border-radius:10px 0 0 10px; background:#fff; }
+.search-bar .input-group-text { background:#3b82f6; border:1.5px solid #3b82f6; border-left:none; border-radius:0 10px 10px 0; color:#fff; padding:9px 14px; }
+fieldset[disabled] { opacity: 0.5; pointer-events: none; }
+</style>
+
+<div class="container">
+  <h2 class="mb-1">Paramétrage académique</h2>
+  <p style="font-size:.82rem;color:#8da0b8;margin-bottom:24px">
+    L'année active filtre automatiquement toute l'application
+  </p>
+  {% if annee_active %}
+<div id="countdown-box"
+     style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;
+            padding:5px 14px;font-size:.8rem;font-weight:600;white-space:nowrap;
+            background:#f0fdf4;border:1px solid #86efac;color:#15803d;
+            margin-bottom:16px;transition:all .3s;">
+  <i class="bi bi-hourglass-top" id="countdown-icon"></i>
+  <span id="countdown-text">Calcul...</span>
+</div>
+
+<script>
+(function () {
+  const fin  = new Date("{{ annee_active.date_fin.strftime('%Y-%m-%d') }}");
+  const box  = document.getElementById("countdown-box");
+  const icon = document.getElementById("countdown-icon");
+  const txt  = document.getElementById("countdown-text");
+
+  function maj() {
+    const diff = fin - new Date();
+
+    if (diff <= 0) {
+      box.style.background = "#fdecea";
+      box.style.border     = "1px solid #f5c0bc";
+      box.style.color      = "#b91c1c";
+      icon.className       = "bi bi-check2-circle";
+      txt.textContent      = "Année terminée";
+      return;
+    }
+
+    const jours   = Math.floor(diff / 86400000);
+    const heures  = Math.floor((diff % 86400000) / 3600000);
+    const minutes = Math.floor((diff % 3600000)  / 60000);
+    const secs    = Math.floor((diff % 60000)    / 1000);
+
+    if (jours <= 7) {
+      box.style.background = "#fdecea";
+      box.style.border     = "1px solid #f5c0bc";
+      box.style.color      = "#b91c1c";
+      icon.className       = "bi bi-hourglass-bottom";
+    } else if (jours <= 30) {
+      box.style.background = "#fff8e6";
+      box.style.border     = "1px solid #fcd97a";
+      box.style.color      = "#9a6800";
+      icon.className       = "bi bi-hourglass-split";
+    } else {
+      box.style.background = "#f0fdf4";
+      box.style.border     = "1px solid #86efac";
+      box.style.color      = "#15803d";
+      icon.className       = "bi bi-hourglass-top";
+    }
+
+    txt.textContent = jours > 0
+      ? `${jours}j ${heures}h ${minutes}m ${secs}s`
+      : `${heures}h ${minutes}m ${secs}s`;
+  }
+
+  maj();
+  setInterval(maj, 1000);
+})();
+</script>
+{% endif %}
+
+ 
+
+  {% if annee_active %}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;
+              background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;
+              padding:12px 18px;max-width:500px">
+    <i class="bi bi-check-circle-fill" style="color:#0369a1"></i>
+    <div>
+      <span style="font-size:0.7rem;text-transform:uppercase;color:#64748b;font-weight:600;">
+        Année active
+      </span><br>
+      <span style="font-size:0.9rem;font-weight:700;color:#0369a1;">
+        {{ annee_active.libelle }}
+      </span>
+      <span style="font-size:0.78rem;color:#64748b;margin-left:8px">
+        {{ annee_active.date_debut.strftime('%d/%m/%Y') }}
+        → {{ annee_active.date_fin.strftime('%d/%m/%Y') }}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card-form" style="max-width:560px">
+
+    {% if annee_edit %}
+    <!-- ── Mode modification ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span style="font-size:0.85rem;font-weight:700;color:#f59e0b">
+        <i class="bi bi-pencil-square me-1"></i> Modifier — {{ annee_edit.libelle }}
+      </span>
+      <a href="{{ url_for('parametrage') }}"
+         style="font-size:0.75rem;color:#64748b;text-decoration:none">
+        <i class="bi bi-x-circle me-1"></i> Annuler
+      </a>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action"   value="modifier">
+      <input type="hidden" name="id_annee" value="{{ annee_edit.id_annee }}">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label>Libellé</label>
+          <input type="text" class="form-control" value="{{ annee_edit.libelle }}" disabled>
+        </div>
+        <div class="col-md-4">
+          <label>Date de début</label>
+          <input type="date" name="date_debut" class="form-control"
+                 value="{{ annee_edit.date_debut.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="col-md-4">
+          <label>Date de fin</label>
+          <input type="date" name="date_fin" class="form-control"
+                 value="{{ annee_edit.date_fin.strftime('%Y-%m-%d') }}" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary mt-3">
+        <i class="bi bi-check2-circle me-1"></i> Enregistrer
+      </button>
+    </form>
+
+    {% else %}
+    <!-- ── Mode création ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-size:0.85rem;font-weight:700;color:#3b82f6;
+                   text-transform:uppercase;letter-spacing:.06em">
+        <i class="bi bi-plus-circle me-1"></i> Nouvelle année
+      </span>
+    </div>
+
+    {% if creation_bloquee %}
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;
+                padding:11px 14px;margin-bottom:16px;font-size:0.8rem;color:#92400e;
+                display:flex;align-items:center;gap:8px">
+      <i class="bi bi-exclamation-triangle-fill" style="font-size:1rem;color:#f59e0b"></i>
+      <span>
+        Création bloquée : <strong>{{ annee_active.libelle }}</strong> est active
+        jusqu'au <strong>{{ annee_active.date_fin.strftime('%d/%m/%Y') }}</strong>.
+        Vous pourrez créer une nouvelle année à cette date.
+      </span>
+    </div>
+    {% endif %}
+
+    <fieldset {% if creation_bloquee %}disabled{% endif %}>
+      <form method="POST" class="mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="creer">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label>Libellé</label>
+            <input type="text" name="annee_libelle" class="form-control"
+                   placeholder="ex : 2025-2026" required>
+          </div>
+          <div class="col-md-4">
+            <label>Date de début</label>
+            <input type="date" name="date_debut" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label>Date de fin</label>
+            <input type="date" name="date_fin" class="form-control" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">
+          <i class="bi bi-check2-circle me-1"></i> Enregistrer
+        </button>
+      </form>
+    </fieldset>
+    {% endif %}
+
+  </div>
+
+  <h3 class="mb-3" style="font-size:0.9rem;font-weight:700;color:#1e2d3d">
+    Années enregistrées
+  </h3>
+
+  <form method="GET" action="{{ url_for('parametrage') }}"
+        class="search-bar mb-3" style="max-width:300px">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control"
+             placeholder="Rechercher…"
+             value="{{ request.args.get('q', '') }}">
+      <span class="input-group-text">
+        <i class="bi bi-search"></i>
+      </span>
+    </div>
+  </form>
+
+  <div style="overflow:hidden;border-radius:10px;border:1px solid #e8eef6;max-width:560px">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Année</th>
+          <th>Début</th>
+          <th>Fin</th>
+          <th>Statut</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in params %}
+        <tr {% if p.active %}style="background:#f0f9ff"{% endif %}>
+          <td><strong>{{ p.libelle }}</strong></td>
+          <td>{{ p.date_debut.strftime('%d/%m/%Y') }}</td>
+          <td>{{ p.date_fin.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if p.active %}
+              <span class="badge-active">✅ Active</span>
+            {% else %}
+              <span class="badge-inactive">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.active %}
+            <a href="{{ url_for('parametrage', edit=p.id_annee) }}"
+               style="background:#e0eaff;color:#3b82f6;border:none;
+                      font-size:0.75rem;padding:4px 10px;border-radius:6px;
+                      text-decoration:none">
+              <i class="bi bi-pencil"></i> Modifier
+            </a>
+            {% else %}
+            <span style="color:#cbd5e1;font-size:0.75rem">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not params %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-3">
+            Aucune année enregistrée.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const input = document.querySelector("input[name='q']");
+  const rows  = document.querySelectorAll("tbody tr");
+
+  input.addEventListener("input", function() {
+    const val = this.value.toLowerCase();
+
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      if (text.includes(val)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  });
+});
+</script>
+
+{% endblock %}

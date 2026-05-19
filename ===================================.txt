@@ -1,0 +1,244 @@
+===================================
+  CAHIER DES CHARGES
+===================================
+
+
+Contexte du projet
+
+L’Institution Universitaire d’Abidjan (IUA) gère chaque année un volume important de données académiques (notes, moyennes, crédits, filières, niveaux, années académiques).
+
+Actuellement, l’analyse des résultats est majoritairement effectuée à l’aide de fichiers Excel, ce qui :
+
+Limite la centralisation des données
+
+Rend difficile l’analyse historique
+
+Complexifie la production d’indicateurs fiables
+
+Retarde la prise de décision
+
+Le présent projet vise donc la mise en place d’un outil décisionnel permettant d’améliorer l’analyse et la prise de décision académique.
+
+2️⃣ Objectifs du projet
+🎯 Objectif général
+
+Concevoir et implémenter un outil décisionnel permettant l’analyse intelligente des performances académiques au sein de l’IUA.
+
+🎯 Objectifs spécifiques
+
+Centraliser les données académiques
+
+Structurer les données dans un Data Warehouse
+
+Mettre en place des indicateurs clés de performance (KPI)
+
+Développer des tableaux de bord interactifs
+
+Sécuriser les données sensibles
+
+3️⃣ Acteurs du système
+
+Administrateur système
+
+
+4️⃣ Fonctionnalités du système
+🔹 4.1 Gestion des utilisateurs
+
+Le système doit permettre :
+
+Création de comptes utilisateurs
+
+Authentification sécurisée (login / mot de passe)
+
+Gestion des rôles :
+
+Administrateur
+
+Directeur académique
+
+Responsable de filière
+
+Gestion des permissions d’accès
+
+Journalisation des connexions
+
+🔹 4.2 Gestion et intégration des données
+
+Le système doit permettre :
+
+Importation des données (Excel, CSV)
+
+Nettoyage automatique des données
+
+Suppression des doublons
+
+Vérification de cohérence des notes
+
+Transformation des données (ETL)
+
+Intégration dans le Data Warehouse
+
+🔹 4.3 Calcul automatique des indicateurs (KPI)
+
+Le système doit calculer automatiquement :
+
+Moyenne générale par étudiant
+
+Moyenne par filière
+
+Moyenne par niveau
+
+Taux de réussite
+
+Taux d’échec
+
+Taux de redoublement
+
+Classement des filières
+
+Matières les plus échouées
+
+Évolution des performances sur plusieurs années
+
+🔹 4.4 Tableaux de bord décisionnels
+
+Le système doit proposer plusieurs dashboards :
+
+📊 Dashboard global
+
+Nombre total d’étudiants
+
+Taux de réussite global
+
+Moyenne générale institutionnelle
+
+Évolution des résultats par année académique
+
+Répartition des admis / ajournés
+
+📈 Dashboard par filière
+
+Performance par niveau (L1, L2, L3…)
+
+Taux de réussite par filière
+
+Comparaison inter-filières
+
+Évolution des moyennes sur 3 à 5 ans
+
+📉 Dashboard par matière
+
+Moyenne par matière
+
+Taux d’échec par matière
+
+Identification des matières critiques
+
+🔹 4.5 Système de filtrage et recherche
+
+Le système doit permettre :
+
+Filtrer par :
+
+Année académique
+
+Filière
+
+Niveau
+
+Semestre
+
+Recherche d’un étudiant spécifique
+
+Comparaison entre années
+
+🔹 4.6 Exportation des résultats
+
+Le système doit permettre :
+
+Export en PDF
+
+Export en Excel
+
+Impression des tableaux de bord
+
+Génération de rapports automatiques
+
+🔹 4.7 Sécurité des données
+
+Le système doit garantir :
+
+Authentification sécurisée
+
+Chiffrement des mots de passe
+
+Accès restreint selon rôle
+
+Sauvegarde automatique des données
+
+Protection contre les accès non autorisés
+
+5️⃣ Besoins non fonctionnels
+🔒 Sécurité
+
+Protection des données académiques
+
+Confidentialité des notes
+
+⚡ Performance
+
+Chargement rapide des tableaux de bord
+
+Capacité à traiter plusieurs années de données
+
+🎨 Ergonomie
+
+Interface simple
+
+Graphiques clairs et lisibles
+
+Utilisable par des non-informaticiens
+
+🔄 Évolutivité
+
+Ajout futur d’analyse prédictive
+
+Intégration possible avec d’autres systèmes
+
+6️⃣ Contraintes
+
+Budget limité
+
+Qualité variable des données existantes
+
+Résistance au changement
+
+Formation nécessaire des utilisateurs
+
+7️⃣ Livrables attendus
+
+Cahier des charges validé
+
+Modèle conceptuel de données (MCD)
+
+Modèle en étoile (Data Warehouse)
+
+Application fonctionnelle
+
+Tableaux de bord interactifs
+
+Guide utilisateur
+
+Rapport de mémoire
+
+8️⃣ Résultat attendu
+
+À la fin du projet, l’IUA disposera :
+
+D’un outil centralisé d’analyse
+
+D’indicateurs fiables
+
+D’un système d’aide à la décision
+
+D’une meilleure visibilité sur la performance académique

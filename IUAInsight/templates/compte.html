@@ -1,0 +1,249 @@
+{% extends layout %}
+{% block content %}
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f0f4fa;
+  min-height: 100vh;
+  color: #1a2a3a;
+}
+
+/* ── Page wrapper ── */
+.page-wrapper {
+  padding: 20px 18px 28px; /* réduit */
+}
+
+/* ── Card ── */
+.card {
+  background: white;
+  border: 1px solid #dce6f0;
+  border-radius: 12px; /* moins arrondi */
+  box-shadow: 0 2px 12px rgba(26,95,180,.07); /* ombre plus discrète */
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ── Header ── */
+.card-header-custom {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px 14px; /* réduit */
+  border-bottom: 1px solid #eef2f8;
+}
+
+.card-header-custom img {
+  border: 2px solid #1a5fb4;
+  object-fit: cover;
+  box-shadow: 0 2px 10px rgba(26,95,180,.12);
+  flex-shrink: 0;
+  width: 65px; height: 65px; /* photo plus petite */
+}
+
+.card-header-custom .user-info h5 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.card-header-custom .user-info p {
+  font-size: 0.75rem;
+  color: #8da0b8;
+  margin: 0;
+}
+
+/* ── Card body ── */
+.card-body {
+  padding: 20px 24px 24px !important; /* réduit */
+}
+
+/* ── Section titles ── */
+.form-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #1a5fb4;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eef2f8;
+}
+
+/* ── Labels ── */
+.form-label {
+  font-size: 0.7rem !important;
+  font-weight: 500;
+  color: #4a6a8a;
+  margin-bottom: 3px;
+}
+
+/* ── Inputs ── */
+.form-control {
+  font-size: 0.75rem !important;
+  background: #f7fafd !important;
+  border: 1px solid #c8d9ec !important;
+  border-radius: 8px !important;
+  padding: 7px 11px !important; /* réduit */
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.form-control:focus {
+  border-color: #1a5fb4 !important;
+  box-shadow: 0 0 0 2px rgba(26,95,180,.12) !important;
+  background: #fff !important;
+}
+
+/* ── Radio ── */
+.form-check-input:checked {
+  background: #1a5fb4 !important;
+  border-color: #1a5fb4 !important;
+}
+
+.form-check-label {
+  font-size: 0.75rem;
+  color: #1a2a3a;
+}
+
+/* ── Séparateur sections ── */
+.form-divider {
+  margin: 18px 0 16px; /* réduit */
+}
+
+/* ── Bouton ── */
+.btn-primary {
+  background: #1a5fb4;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background .18s, transform .12s;
+}
+
+.btn-primary:hover {
+  background: #154e99;
+  transform: translateY(-1px);
+}
+
+/* ── Erreurs ── */
+.text-danger { font-size: 0.68rem; }
+
+/* ── Grid spacing ── */
+.row.g-4 { --bs-gutter-x: 20px; --bs-gutter-y: 14px; }
+.mb-section { margin-bottom: 18px; }
+
+</style>
+
+
+<div class="page-wrapper">
+  <div class="card">
+
+    <!-- Header : photo + nom + titre -->
+    <div class="card-header-custom">
+     
+      <img src="{{ image_file }}" class="rounded-circle" width="80" height="80">
+      <div class="user-info">
+        <h5>{{ current_user.nom }} {{ current_user.prenom }}</h5>
+        <p>{{ current_user.email }}</p>
+      </div>
+    
+    </div>
+
+    <!-- Corps du formulaire -->
+    <div class="card-body">
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <!-- Section Identité -->
+        <div class="form-section-title">Identité</div>
+        <div class="row g-4 mb-section">
+          <div class="col-md-4">
+            {{ form.first_name.label(class="form-label") }}
+            {{ form.first_name(class="form-control") }}
+            {% for error in form.first_name.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.last_name.label(class="form-label") }}
+            {{ form.last_name(class="form-control") }}
+            {% for error in form.last_name.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.genre.label(class="form-label") }}
+            <div class="mt-2">
+              {% for subfield in form.genre %}
+              <div class="form-check form-check-inline">
+                {{ subfield(class="form-check-input") }}
+                {{ subfield.label(class="form-check-label") }}
+              </div>
+              {% endfor %}
+            </div>
+            {% for error in form.genre.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Section Connexion -->
+        <div class="form-divider">
+          <div class="form-section-title">Connexion</div>
+        </div>
+        <div class="row g-4 mb-section">
+          <div class="col-md-4">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control") }}
+            {% for error in form.email.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control") }}
+            {% for error in form.password.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-4">
+            {{ form.confirm_password.label(class="form-label") }}
+            {{ form.confirm_password(class="form-control") }}
+            {% for error in form.confirm_password.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Section Photo -->
+        <div class="form-divider">
+          <div class="form-section-title">Photo de profil</div>
+        </div>
+        <div class="row g-4 mb-section">
+          <div class="col-md-6">
+            {{ form.picture.label(class="form-label") }}
+            {{ form.picture(class="form-control") }}
+            {% for error in form.picture.errors %}
+              <div class="text-danger mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Bouton -->
+        <div class="d-flex justify-content-end mt-2">
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+
+      </form>
+    </div><!-- /card-body -->
+  </div><!-- /card -->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

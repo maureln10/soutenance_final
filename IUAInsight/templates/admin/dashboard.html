@@ -1,0 +1,207 @@
+{%extends 'layout.html'%}
+{% block content %}
+ 
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+
+
+:root {
+  --bg: #eef2f7;
+  --text: #1e2d3d;
+  --muted: #8da0b8;
+  --accent: #3b82f6;
+  --shadow: 0 4px 12px rgba(30,45,61,0.08);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-block;
+}
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: var(--muted) !important;
+  margin-bottom: 24px;
+}
+
+.container-fluid { padding: 24px 28px; }
+
+.card {
+  background: #fff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(30,45,61,0.12) !important;
+}
+
+.kpi-row { margin-bottom: 20px; }
+.kpi-row .col-md-2 { padding: 0 8px; margin-bottom: 16px; }
+
+.card.text-center .card-body {
+  padding: 14px 10px !important;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.card.text-center h4 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--accent);
+}
+
+.card.text-center p {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.kpi-row .card-body i {
+  font-size: 18px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 6px auto;
+  background: var(--bg);
+  color: var(--accent);
+  transition: transform 0.2s ease;
+}
+.kpi-row .card-body i:hover {
+  transform: scale(1.15);
+}
+.table {
+  font-size: 10px;
+  margin-bottom: 0 !important;
+  border: none !important;
+}
+
+.table > thead.table-dark > tr > th,
+.table-dark th {
+  background: #1e2d3d !important;
+  color: white;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 12px 16px !important;
+  border: none !important;
+}
+
+.table tbody td {
+  padding: 12px 16px !important;
+  vertical-align: middle !important;
+  border: none !important;
+  color: #1e2d3d;
+}
+
+.table-striped > tbody > tr:nth-child(odd) > *  { background-color: #f8fafc !important; }
+.table-striped > tbody > tr:nth-child(even) > * { background-color: #ffffff !important; }
+
+.table tbody tr { transition: background 0.15s; }
+.table tbody tr:hover > * { background-color: #eff6ff !important; }
+
+
+
+
+@media (max-width: 768px) {
+  .container-fluid { padding: 14px; }
+  .card.text-center h4 { font-size: 1.2rem; }
+  .kpi-row .col-md-2 { flex: 0 0 50%; max-width: 50%; }
+}
+
+</style>
+
+
+
+<div class="container-fluid">
+
+  <h2 class="mb-3">Tableau de bord</h2><br><br>
+  <p class="text-muted">
+    Vue d'ensemble sur les différents compte ·
+    
+  </p>
+
+
+  <!-- ── KPI ── -->
+  <div class="row kpi-row">
+    <div class="col-md-2">
+      <div class="card text-center">
+        <div class="card-body">
+          <i class="bi bi-person"></i>
+          {%if nb_compte == 1%}
+          <h4>{{ nb_compte }}</h4>
+          <p> compte crée</p>
+          {% else %}
+          <h4>{{ nb_compte }}</h4>
+          <p> compte crée</p>
+          {%endif%}
+        </div>
+      </div>
+    </div>
+ 
+  <div class="card-body">
+     <div class="mb-3">
+  <span style="font-weight:700;">Liste des comptes crées</span>
+</div>
+
+<div class="table-responsive">
+  <table id="studentTable" class="table table-striped mb-0">
+    <thead class="table-dark">
+      <tr>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Date de création</th>
+        
+      </tr>
+    </thead>
+    <tbody>
+                  {% for user in users %}
+            <tr>
+              <td>{{ user.nom }}</td>
+              <td>{{ user.prenom }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role if user.role else 'N/A' }}</td>
+              <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+    </tbody>
+  </table>
+</div>
+   
+{% endblock %}

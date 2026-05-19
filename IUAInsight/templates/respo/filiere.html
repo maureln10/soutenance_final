@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* Police générale */
+body{
+  font-family: 'Inter', sans-serif;
+}
+
+/* Titre */
+h2{
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+
+h2::after{
+  content:'';
+  display:block;
+  width:40px;
+  height:3px;
+  background:#3b82f6;
+  border-radius:4px;
+  margin-top:6px;
+}
+
+/* Sous-texte */
+.text-muted{
+  font-size:0.82rem;
+  color:#8da0b8 !important;
+}
+
+/* Badge statut */
+.badge{
+  font-size:0.7rem;
+  padding:4px 8px;
+  border-radius:6px;
+}
+
+/* Card */
+.card{
+  border:none;
+  border-radius:10px;
+}
+
+.card-header{
+  font-size:0.9rem;
+  font-weight:600;
+}
+
+.m1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.m1 .form-select {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 6px;
+  color: #1e2d3d;
+  background: #ffffff;
+  padding: 7px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 130px;
+}
+
+.m1 .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .1);
+}
+.table {
+  font-size: 10px;
+  margin-bottom: 0 !important;
+  border: none !important;
+}
+
+.table > thead.table-dark > tr > th,
+.table-dark th {
+  background: #1e2d3d !important;
+  color: white;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 12px 16px !important;
+  border: none !important;
+}
+
+.table tbody td {
+  padding: 12px 16px !important;
+  vertical-align: middle !important;
+  border: none !important;
+  color: #1e2d3d;
+}
+
+.table-striped > tbody > tr:nth-child(odd) > *  { background-color: #f8fafc !important; }
+.table-striped > tbody > tr:nth-child(even) > * { background-color: #ffffff !important; }
+
+.table tbody tr { transition: background 0.15s; }
+.table tbody tr:hover > * { background-color: #eff6ff !important; }
+
+</style>
+<br><br>
+
+
+<div class="container-fluid">
+  <h2 class="mb-1">Filières</h2>
+  <p class="text-muted mb-4"> Suivi des filières actives</p><br>
+
+  <!-- Recherche SANS CSRF (GET au lieu de POST) -->
+<form method="GET" class="m1">
+  <!-- Filtre Filière -->
+  <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+    {% for f in filieres_list %}
+      <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+        {{ f.nom_filiere }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <!-- Filtre Semestre -->
+  <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
+    {% for s in semestre %}
+      <option value="{{ s.id_semestre }}" {% if semestre_selected == s.id_semestre|string %}selected{% endif %}>
+        {{ s.libelle }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+
+  <!-- Tableau des filières -->
+  <div class="table-responsive">
+    <table class="table table-striped mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>Filière</th>
+          <th>Niveaux</th>
+          <th>Inscrits</th>
+          <th>Taux Réussite</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in filieres %}
+        <tr>
+          <td>{{ f.filiere }}</td>
+          <td>{{ f.niveaux }}</td>
+          <td>{{ f.inscrits }}</td>
+          <td>{{ f.taux_reussite }}%</td>
+          <td>
+            {% if f.statut == "Actif" %}
+              <span class="badge bg-success">Actif</span>
+            {% elif f.statut == "Surveillance" %}
+              <span class="badge bg-warning text-dark">Surveillance</span>
+            {% elif f.statut == "Critique" %}
+              <span class="badge bg-danger">Critique</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ f.statut }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends 'layout.html'%}
+{% block content%}
+<div class="container-fluid">
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #eef2f7;
+      min-height: 100vh;
+      color: #1e2d3d;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #1e2d3d;
+      display: inline-block;
+    }
+
+    h2::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 3px;
+      background: #3b82f6;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+
+    .text-muted {
+      font-size: 0.82rem;
+      color: #8da0b8 !important;
+      margin-bottom: 24px;
+    }
+
+    .table {
+      font-size: 0.875rem;
+      margin-bottom: 0 !important;
+    }
+
+    .table > thead.table-dark > tr > th {
+      background: #1e2d3d !important;
+      color: white !important;
+      font-size: 0.72rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      padding: 12px 16px !important;
+      border: none !important;
+    }
+
+    .table tbody td {
+      padding: 12px 16px !important;
+      vertical-align: middle !important;
+      border-color: #eef2f7 !important;
+      color: #1e2d3d;
+    }
+
+    .table-striped > tbody > tr:nth-child(odd) > *  { background-color: #f8fafc !important; }
+    .table-striped > tbody > tr:nth-child(even) > * { background-color: #ffffff !important; }
+
+    .table tbody tr:hover > * { background-color: #eff6ff !important; }
+
+    .m1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      margin-bottom: 24px;
+    }
+    .m1 .form-select {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      border: 1.5px solid #dde5f0;
+      border-radius: 6px;
+      color: #1e2d3d;
+      background: #ffffff;
+      padding: 7px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 130px;
+    }
+    .m1 .form-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+    </style>
+    <br>
+<div class="container-fluid">
+
+  <h2 class="mb-3">Comparaison par spécialité </h2>
+  <p class="text-muted">Analyse détaillée · {{ annee_active.libelle }}</p>
+
+  <!-- Filtres -->
+  <form method="GET" class="m1">
+    <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+      {% for f in filieres %}
+        <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+          {{ f.nom_filiere }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
+      {% for n in niveaux %}
+        <option value="{{ n.id_niveau }}" {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
+          {{ n.libelle }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
+      {% for s in semestre %}
+        <option value="{{ s['id_semestre'] }}" {% if semestre_selected == s['id_semestre'] %}selected{% endif %}>
+          {{ s['libelle'] }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <!-- Tableau comparatif -->
+  <div class="tableau">
+    <table class="table table-striped mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th style="width:50px">Rang</th>
+          <th>Spécialité</th>
+          <th>Niveau</th>
+          <th>Inscrits</th>
+          <th>Admis</th>
+          <th>Ajournés</th>
+          {% if semestre_selected == "all" %}
+            <th>Redoublants</th>
+            <th>Admis (endetté)</th>
+          {% endif %}
+          <th>Taux de réussite</th>
+          <th>Taux d'échec</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in liste %}
+        <tr>
+          <td>
+            <span style="color:#8da0b8;font-weight:600">{{ loop.index }}</span>
+          </td>
+          <td style="font-weight:600">{{ row.specialite }}</td>
+          <td>{{ row.niveau }}</td>
+          <td>{{ row.inscrits }}</td>
+
+          <!-- Admis complet uniquement -->
+          <td style="color:#22c55e;font-weight:600">{{ row.admis }}</td>
+
+          <!-- Ajournés -->
+          <td style="color:#f59e0b;font-weight:600">{{ row.ajournes }}</td>
+
+          {% if semestre_selected == "all" %}
+            <!-- Redoublants -->
+            <td style="color:#ef4444;font-weight:600">
+              {{ row.redoublants if row.redoublants is not none else '—' }}
+            </td>
+
+            <!-- FIX : Admis (endetté) — était vide avant -->
+            <td style="color:#3b82f6;font-weight:600">
+              {{ row.admis_dettes if row.admis_dettes is not none else '—' }}
+            </td>
+          {% endif %}
+
+          <td>
+            <span class="badge" style="background:{% if row.taux_reussite >= 60 %}#22c55e{% elif row.taux_reussite >= 50 %}#f59e0b{% else %}#ef4444{% endif %}">
+              {{ row.taux_reussite }}%
+            </span>
+          </td>
+          <td>
+            <span class="badge" style="background:{% if row.taux_echec >= 40 %}#ef4444{% elif row.taux_echec >= 25 %}#f59e0b{% else %}#22c55e{% endif %}">
+              {{ row.taux_echec }}%
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{% if semestre_selected == 'all' %}9{% else %}8{% endif %}"class="text-center text-muted py-3">
+            Aucune donnée disponible pour cette sélection.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

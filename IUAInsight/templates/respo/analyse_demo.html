@@ -1,0 +1,403 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #eef2f7;
+  min-height: 100vh;
+  color: #1e2d3d;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+}
+/*
+.row.mb-4 .col-6.col-md-3:nth-child(1) .card { border-top: 4px solid #3b82f6 !important; }
+.row.mb-4 .col-6.col-md-3:nth-child(2) .card { border-top: 4px solid #22c55e !important; }
+.row.mb-4 .col-6.col-md-3:nth-child(3) .card { border-top: 4px solid #f59e0b !important; }
+.row.mb-4 .col-6.col-md-3:nth-child(4) .card { border-top: 4px solid #a855f7 !important; }*/
+
+/* ── Cards KPI taille uniforme ── */
+.card.text-center .card-body {
+  padding: 12px 8px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 120px;
+  justify-content: center;
+}
+
+.card.text-center h4 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.row.mb-4 .col-6.col-md-3:nth-child(1) .card h4 { color: #3b82f6; }
+.row.mb-4 .col-6.col-md-3:nth-child(2) .card h4 { color: #22c55e; }
+.row.mb-4 .col-6.col-md-3:nth-child(3) .card h4 { color: #f59e0b; }
+.row.mb-4 .col-6.col-md-3:nth-child(4) .card h4 { color: #a855f7; }
+
+.card.text-center p {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #8da0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-align: center;
+}
+
+/* ── Icônes KPI ── */
+.row.mb-4 .card-body i {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  margin: 0 auto 4px auto;
+}
+
+.row.mb-4 .col-6.col-md-3:nth-child(1) .card-body i { color: #3b82f6; background: #dbeafe; }
+.row.mb-4 .col-6.col-md-3:nth-child(2) .card-body i { color: #22c55e; background: #dcfce7; }
+.row.mb-4 .col-6.col-md-3:nth-child(3) .card-body i { color: #f59e0b; background: #fef3c7; }
+.row.mb-4 .col-6.col-md-3:nth-child(4) .card-body i { color: #a855f7; background: #f3e8ff; }
+
+.card-header {
+  background: #ffffff !important;
+  border-bottom: 1.5px solid #e8eef6 !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  padding: 16px 22px !important;
+}
+
+.card-body { padding: 20px !important; }
+
+.mb-3 { margin-bottom: 18px !important; }
+.mb-4 { margin-bottom: 24px !important; }
+
+small { font-size: 11px; font-weight: 400; color: #8da0b8; }
+
+/* ── Taille uniforme pour tous les canvas ── */
+.chart-wrap {
+  position: relative;
+  height: 220px;
+}
+
+/* ── Barre de filtres ── */
+.m1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.m1 .form-select {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 6px;
+  color: #1e2d3d;
+  background: #ffffff;
+  padding: 7px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 130px;
+}
+
+.m1 .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+.row p, small {
+  font-size: 10px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .card.text-center h4 { font-size: 1.2rem; }
+  .card-body { padding: 10px !important; }
+  .chart-wrap { height: 170px; }
+}
+</style>
+<br>
+
+<div class="container-fluid">
+  <h2 class="mb-1">Analyse Démographique</h2><br><br>
+  <p class="text-muted">Répartition des étudiants par genre, âge et origine</p>
+
+  <!-- ── Filtres ── -->
+ <form method="GET" action="" class="m1">
+  <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+    {% for f in filieres_list %}
+      <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+        {{ f.nom_filiere }}
+      </option>
+    {% endfor %}
+  </select>
+
+ <select name="specialite" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if specialite_selected == 'all' %}selected{% endif %}>Spécialités</option>
+    {% for s in specialites %}
+      <option value="{{ s.id_specialite }}" {% if specialite_selected == s.id_specialite|string %}selected{% endif %}>
+        {{ s.nom_specialite }}
+      </option>
+    {% endfor %}
+  </select>
+<select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
+    {% for n in niveaux %}
+      <option value="{{ n.id_niveau }}" {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
+        {{ n.libelle }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+<!-- KPI -->
+<div class="row mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-gender-female"></i>
+
+        <h4>{{ femmes }}</h4>
+        <p>
+          {% if femmes == 1 %}Étudiante{% else %}Étudiantes{% endif %}
+        </p>
+        <small>
+      
+         {% if femmes_nationales == 1 %}Nationale{% else %}Nationales{% endif %} :  {{ femmes_nationales }}<br>
+        {% if femmes_etrangeres == 1 %}Etrangère{% else %}Etrangères{% endif %} :  {{ femmes_etrangeres }} 
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-gender-male"></i>
+
+
+        <h4>{{ hommes }}</h4>
+        <p>
+          {% if hommes == 1 %}Étudiant{% else %}Étudiants{% endif %}
+        </p>
+        <small>
+        
+          {% if hommes_nationaux == 1 %}National{% else %}Nationaux{% endif %}: {{ hommes_nationaux }}<br>
+          {% if hommes_etrangers == 1 %}Etranger{% else %}Etrangers{% endif %}: {{ hommes_etrangers }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <i class="bi bi-person-badge"></i>
+        <h4>{{ nb_nationalites }}</h4>
+        <p>
+          {% if nb_nationalites == 1 %}Nationalité{% else %}Nationalités{% endif %}
+        </p>
+        <small>
+        {% if nationaux == 1 %}National{% else %}Nationaux{% endif %} : {{ nationaux }}<br>
+        {% if etrangers == 1 %}Ntranger{% else %}Etrangers{% endif %} : {{ etrangers }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+<i class="bi bi-clock"></i>
+        <h4>{{ age_moyen }}</h4>
+        <p>Âge moyen <br></p>
+        <small><br><br></small>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Ligne 1 : Genre + Âge -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Répartition par Genre</div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="genreChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Répartition par Âge</div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="ageChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ligne 2 : Nationalité + Filière & Genre -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Répartition Nationaux vs Étrangers</div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="nationaliteChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Répartition par Filière & Genre</div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="filiereGenreChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script id="demo-data" type="application/json">
+{
+  "femmes":        {{ femmes        | default(0) | tojson }},
+  "hommes":        {{ hommes        | default(0) | tojson }},
+  "nationaux":     {{ nationaux     | default(0) | tojson }},
+  "etrangers":     {{ etrangers     | default(0) | tojson }},
+  "ageLabels":     {{ ages          | default([]) | map(attribute='intervalle') | list | tojson }},
+  "ageData":       {{ ages          | default([]) | map(attribute='effectif')   | list | tojson }},
+  "filiereLabels": {{ filieres      | default([]) | map(attribute='nom')        | list | tojson }},
+  "filiereHommes": {{ filieres      | default([]) | map(attribute='hommes')     | list | tojson }},
+  "filiereFemmes": {{ filieres      | default([]) | map(attribute='femmes')     | list | tojson }}
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size   = 12;
+  Chart.defaults.color       = '#64748b';
+
+  const D = JSON.parse(document.getElementById('demo-data').textContent);
+
+  new Chart(document.getElementById('genreChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Femmes', 'Hommes'],
+      datasets: [{ data: [D.femmes, D.hommes], backgroundColor: ['#3b82f6', '#22c55e'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
+        tooltip: { callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a,b)=>a+b,0); return ` ${ctx.label} : ${ctx.parsed} (${t?((ctx.parsed/t)*100).toFixed(1):0}%)`; } } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('ageChart'), {
+    type: 'bar',
+    data: {
+      labels: D.ageLabels,
+      datasets: [{ label: "Étudiants", data: D.ageData, backgroundColor: '#a855f7', borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} étudiants` } } },
+      scales: { x: { grid: { display: false }, border: { display: false } }, y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } } }
+    }
+  });
+
+  new Chart(document.getElementById('nationaliteChart'), {
+    type: 'pie',
+    data: {
+      labels: ['Nationaux', 'Étrangers'],
+      datasets: [{ data: [D.nationaux, D.etrangers], backgroundColor: ['#2563eb', '#f97316'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
+        tooltip: { callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a,b)=>a+b,0); return ` ${ctx.label} : ${ctx.parsed} (${t?((ctx.parsed/t)*100).toFixed(1):0}%)`; } } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('filiereGenreChart'), {
+    type: 'bar',
+    data: {
+      labels: D.filiereLabels,
+      datasets: [
+        { label: 'Hommes (%)', data: D.filiereHommes, backgroundColor: '#22c55e', borderRadius: 4, borderSkipped: false },
+        { label: 'Femmes (%)', data: D.filiereFemmes, backgroundColor: '#3b82f6', borderRadius: 4, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { boxWidth: 10, padding: 14 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false } },
+        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+</script>
+
+{% endblock %}

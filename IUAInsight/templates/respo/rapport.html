@@ -1,0 +1,216 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+body { font-family: 'Inter', sans-serif; }
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: rgb(137, 252, 137);
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+  margin-bottom: 24px;
+}
+
+.form-label       { font-size: 0.75rem !important; margin-bottom: 2px; }
+.form-select      { font-size: 0.8rem !important;  padding: 5px 10px !important; }
+.form-check-label { font-size: 0.8rem; }
+.card-body        { padding: 14px 18px !important; }
+.mb-3             { margin-bottom: 8px !important; }
+.btn              { font-size: 0.8rem !important; padding: 6px 14px !important; }
+</style>
+
+<br>
+
+<div class="container-fluid">
+  <h2 class="mb-1">Rapports &amp; Export</h2>
+  <p class="text-muted">Génération et téléchargement des rapports académiques officiels</p>
+
+  <div class="row">
+
+    <!-- ── Générer un Rapport ── -->
+    <div class="col-md-5">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header" style="font-size:.85rem;padding:10px 18px">Générer un Rapport</div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('rapport') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+              {{ form.type_rapport.label(class="form-label") }}
+              {{ form.type_rapport(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.periode.label(class="form-label") }}
+              {{ form.periode(class="form-select", disabled=not annee_active) }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.filiere.label(class="form-label") }}
+              {{ form.filiere(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.niveau.label(class="form-label") }}
+              {{ form.niveau(class="form-select") }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.format_fichier.label(class="form-label") }}<br>
+              {% for subfield in form.format_fichier %}
+                <div class="form-check form-check-inline">
+                  {{ subfield(class="form-check-input") }}
+                  {{ subfield.label(class="form-check-label") }}
+                </div>
+              {% endfor %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary") }}
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Rapports Récents ── -->
+    <div class="col-md-7">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="font-size:.85rem;padding:10px 18px">
+          <span>Rapports Récents</span>
+          {% if rapports %}
+          <form method="POST" action="{{ url_for('rapport_clear') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Voulez-vous vraiment vider tout l\'historique ?')">
+              <i class="bi bi-trash"></i> Vider l'historique
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        <div class="table-responsive">
+          <table class="table table-striped mb-0" style="font-size:.82rem">
+            <thead class="table-dark">
+              <tr>
+                <th>Rapport</th><th>Date</th><th>Format</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rapports %}
+              <tr>
+                <td>
+                  {{ r.titre }}<br>
+                  <small class="text-muted">{{ r.details }}</small>
+                </td>
+                <td>{{ r.date.strftime('%d/%m/%Y %H:%M') if r.date else '—' }}</td>
+                <td>
+                  {% if r.format == "PDF" %}
+                    <span class="badge bg-danger">PDF</span>
+                  {% else %}
+                    <span class="badge bg-success">Excel</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="POST"
+                        action="{{ url_for('rapport_delete', rapport_id=r.id) }}"
+                        style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Supprimer ce rapport ?')">
+                      <i class="bi bi-trash"></i> Supprimer
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+
+              {% if not rapports %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-3">Aucun rapport généré.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+
+  // ── Téléchargement automatique après génération ───────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const dl = params.get('dl');
+  if (dl) {
+    sessionStorage.setItem('rapport_dl', dl);
+    window.location.href = "{{ url_for('rapport_download', filename='__DL__') }}"
+      .replace('__DL__', encodeURIComponent(dl));
+    history.replaceState(null, '', "{{ url_for('rapport') }}");
+  }
+
+  const dlMsg = sessionStorage.getItem('rapport_dl');
+  if (dlMsg) {
+    // Utilise le système de toast de layout.html
+    const stack = document.getElementById('flash-toast-stack');
+    if (stack) {
+      const toast = document.createElement('div');
+      toast.className = 'flash-toast success';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(40px)';
+      toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      toast.innerHTML = `
+        <i class="bi bi-check-circle-fill"></i>
+        <div class="flash-toast-body">
+          <div class="flash-toast-title">Succès</div>
+          <div class="flash-toast-msg">Rapport « ${dlMsg} » généré et téléchargé avec succès.</div>
+        </div>
+        <button class="flash-toast-close" aria-label="Fermer">✕</button>
+      `;
+      stack.appendChild(toast);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0)';
+      }));
+      const timer = setTimeout(() => dismiss(toast), 4000);
+      toast.querySelector('.flash-toast-close').addEventListener('click', e => {
+        e.stopPropagation(); clearTimeout(timer); dismiss(toast);
+      });
+      toast.addEventListener('click', () => { clearTimeout(timer); dismiss(toast); });
+    }
+    sessionStorage.removeItem('rapport_dl');
+  }
+
+  function dismiss(toast) {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(40px)';
+    setTimeout(() => toast.remove(), 400);
+  }
+
+  // ── Sélection période par défaut ──────────────────────────────────────────
+  const periodeSelect = document.getElementById('periode');
+  if (periodeSelect && periodeSelect.options.length >= 3) {
+    periodeSelect.selectedIndex = 2;
+  }
+
+})();
+</script>
+{% endblock %}

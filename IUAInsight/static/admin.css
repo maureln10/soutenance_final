@@ -1,0 +1,150 @@
+/* ============================================================
+   IUAInsight — admin.css   |   Création Admin · Bleu sombre
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0f1623;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Wrapper ── */
+.admin-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ── Card ── */
+.admin-card {
+  background: #122039;
+  border: 1px solid #1e3a5f;
+  border-radius: 12px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Titres ── */
+.admin-card h2 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.admin-card h5 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1a5fb4;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-card p {
+  font-size: 0.85rem;
+  color: #7a99bb;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.maurel {
+  color: #7a99bb !important;
+}
+
+/* ── Input icon ── */
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4a7aab;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+/* ── Inputs ── */
+.form-control {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.9rem !important;
+  background: #0d1b2e !important;
+  border: 1px solid #1e3a5f !important;
+  border-radius: 8px !important;
+  color: #d0e4f7 !important;
+  padding: 14px 16px 14px 42px !important;
+  transition: border-color 0.2s;
+}
+
+.form-control::placeholder {
+  color: #4a6a8a;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #2e6db4 !important;
+  box-shadow: 0 0 0 3px rgba(46, 109, 180, 0.2);
+  background: #0d1b2e !important;
+}
+
+/* ── Radio ── */
+.form-check-input:checked {
+  background-color: #1a5fb4;
+  border-color: #1a5fb4;
+}
+
+.form-check-label {
+  color: #d0e4f7;
+  font-size: 0.85rem;
+}
+
+/* ── Label genre ── */
+.form-label {
+  font-size: 0.8rem;
+  color: #7a99bb;
+}
+
+/* ── Errors ── */
+.text-danger {
+  font-size: 0.75rem;
+  color: #ff6b6b !important;
+  margin-top: 4px;
+  display: block;
+}
+
+/* ── Bouton ── */
+.btn-primary {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #1a5fb4;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 14px;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1a4f9a;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .admin-card { padding: 28px 20px; }
+}

@@ -1,0 +1,82 @@
+1. Objectifs du projet
+Centraliser les données académiques (étudiants, filières, matières, notes, résultats).
+
+Fournir des tableaux de bord interactifs pour les décideurs (administration, enseignants).
+
+Permettre une analyse multi-niveaux (par étudiant, par matière, par filière, par année).
+
+Améliorer la transparence et la prise de décision basée sur les données.
+
+2. Fonctionnalités principales
+Gestion des données académiques
+
+Importation et mise à jour des notes, résultats, inscriptions.
+
+Historique des parcours étudiants.
+
+Tableaux de bord décisionnels
+
+KPI académiques (taux de réussite, taux d’abandon, moyennes par filière).
+
+Comparaison inter-années et inter-filières.
+
+Analyses avancées
+
+Segmentation par genre, âge, origine scolaire.
+
+Détection des tendances et anomalies (ex. baisse de performance).
+
+Rapports et export
+
+Génération de rapports PDF/Excel pour les conseils pédagogiques.
+
+Export des données pour usage externe.
+
+Sécurité et droits d’accès
+
+Authentification par rôle (administrateur, enseignant, étudiant).
+
+Gestion des permissions sur les données sensibles.
+
+3. Exigences techniques
+Architecture
+
+Backend : PHP/MySQL ou Flask/Python (selon contexte).
+
+Frontend : responsive, flat design, UI minimaliste.
+
+Base de données
+
+Modélisation relationnelle complète (étudiants, filières, matières, notes, résultats, utilisateurs).
+
+Cohérence et intégrité référentielle.
+
+Performance
+
+Optimisation des requêtes SQL pour gros volumes de données.
+
+Caching des indicateurs fréquents.
+
+Interopérabilité
+
+API REST pour intégration avec d’autres systèmes académiques.
+
+Support d’import/export CSV/Excel.
+
+4. Contraintes et normes
+Respect des normes RGPD/locales pour la protection des données étudiantes.
+
+Interface multilingue (français/anglais).
+
+Accessibilité (WCAG) pour étudiants et enseignants.
+
+5. Livrables attendus
+Cahier de conception technique (modèles de données, architecture).
+
+Interfaces prototypes (maquettes UI/UX).
+
+Application fonctionnelle avec jeux de données de test.
+
+Documentation utilisateur et administrateur.
+
+Formation des utilisateurs clés.

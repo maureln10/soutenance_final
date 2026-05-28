@@ -8,6 +8,10 @@ Modèle unique entraîné automatiquement sur les données réelles :
     · Probabilité d'abandon (déduite des probas RF)
     · Recommandations ciblées (règles métier enrichies par le RF)
 
+Nouveauté v2 :
+    · Détection automatique si l'année scolaire est terminée (annee.date_fin < today)
+    · Si année terminée : absences et échecs sont définitifs → probabilités ajustées
+
 Usage :
     from IUAInsight.ml_models import ml_engine
     result  = ml_engine.predict(inscription)          # 1 étudiant
@@ -20,9 +24,10 @@ import os
 import pickle
 import logging
 import warnings
+from datetime import date, datetime
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
@@ -46,10 +51,32 @@ META_PATH       = os.path.join(MODEL_DIR, "meta.pkl")
 
 
 # ──────────────────────────────────────────────
+# HELPER : détection année terminée
+# ──────────────────────────────────────────────
+
+def _is_annee_terminee(inscription) -> bool:
+    """
+    Retourne True si l'année scolaire de cette inscription est terminée
+    (date_fin < aujourd'hui). Utilisé pour durcir les prédictions.
+    """
+    try:
+        annee = inscription.annee
+        if annee and annee.date_fin:
+            date_fin = annee.date_fin
+            # Convertit en date si c'est un datetime
+            if hasattr(date_fin, "date"):
+                date_fin = date_fin.date()
+            return date_fin < date.today()
+    except Exception:
+        pass
+    return False
+
+
+# ──────────────────────────────────────────────
 # EXTRACTION DES FEATURES
 # ──────────────────────────────────────────────
 
-def _extract_features(inscription) -> dict:
+def _extract_features(inscription, annee_terminee: bool = False) -> dict:
     m_s1  = inscription.moyenne_s1       if inscription.moyenne_s1       is not None else -1.0
     m_s2  = inscription.moyenne_s2       if inscription.moyenne_s2       is not None else -1.0
     m_ann = inscription.moyenne_annuelle if inscription.moyenne_annuelle is not None else -1.0
@@ -92,31 +119,44 @@ def _extract_features(inscription) -> dict:
     id_niveau      = int(inscription.id_niveau)  if inscription.id_niveau  else 0
     id_filiere     = int(inscription.id_filiere) if inscription.id_filiere else 0
 
+    # ── Features liées à l'état de l'année ──────────────────────────────
+    # Si l'année est terminée, une absence de note n'est plus "en attente"
+    # mais un fait définitif (abandon, non-présentation, etc.)
+    s1_absent = float(m_s1 < 0)
+    s2_absent = float(m_s2 < 0)
+
     return {
-        "moy_s1":               max(m_s1,  0.0),
-        "moy_s2":               max(m_s2,  0.0),
-        "moy_annuelle":         max(m_ann, 0.0),
-        "moy_best":             max(moy_best, 0.0),
-        "ratio_credits":        ratio_credits,
-        "credits_val":          credits_val,
-        "credits_req":          credits_req,
-        "credits_val_s1":       credits_val_s1,
-        "credits_val_s2":       credits_val_s2,
-        "nb_matieres_total":    float(nb_matieres_total),
-        "nb_matieres_echouees": float(nb_matieres_echouees),
-        "taux_echec_matieres":  taux_echec_matieres,
-        "progression_s1_s2":    progression,
-        "est_redoublant":       float(est_redoublant),
-        "a_note_s1":            float(m_s1 >= 0),
-        "a_note_s2":            float(m_s2 >= 0),
-        "a_aucune_note":        float(m_s1 < 0 and m_s2 < 0),
-        "id_niveau":            float(id_niveau),
-        "id_filiere":           float(id_filiere),
+        "moy_s1":                    max(m_s1,  0.0),
+        "moy_s2":                    max(m_s2,  0.0),
+        "moy_annuelle":              max(m_ann, 0.0),
+        "moy_best":                  max(moy_best, 0.0),
+        "ratio_credits":             ratio_credits,
+        "credits_val":               credits_val,
+        "credits_req":               credits_req,
+        "credits_val_s1":            credits_val_s1,
+        "credits_val_s2":            credits_val_s2,
+        "nb_matieres_total":         float(nb_matieres_total),
+        "nb_matieres_echouees":      float(nb_matieres_echouees),
+        "taux_echec_matieres":       taux_echec_matieres,
+        "progression_s1_s2":         progression,
+        "est_redoublant":            float(est_redoublant),
+        "a_note_s1":                 float(m_s1 >= 0),
+        "a_note_s2":                 float(m_s2 >= 0),
+        "a_aucune_note":             float(m_s1 < 0 and m_s2 < 0),
+        "id_niveau":                 float(id_niveau),
+        "id_filiere":                float(id_filiere),
+        # ── Nouvelles features v2 ────────────────────────────────────────
+        "annee_terminee":            float(annee_terminee),
+        "s2_absent_annee_finie":     float(annee_terminee and s2_absent),
+        "s1_absent_annee_finie":     float(annee_terminee and s1_absent),
+        "aucune_note_annee_finie":   float(annee_terminee and s1_absent and s2_absent),
     }
 
 
-def _build_dataframe(inscriptions: list) -> pd.DataFrame:
-    return pd.DataFrame([_extract_features(ins) for ins in inscriptions])
+def _build_dataframe(inscriptions: list, annee_terminee: bool = False) -> pd.DataFrame:
+    return pd.DataFrame([
+        _extract_features(ins, annee_terminee) for ins in inscriptions
+    ])
 
 
 # ──────────────────────────────────────────────
@@ -151,6 +191,13 @@ def _label_risk(inscription) -> str:
     if getattr(inscription, "est_redoublant", False): score += 15
     if inscription.moyenne_s1 is None and inscription.moyenne_s2 is None: score += 10
     if inscription.moyenne_s1 is not None and inscription.moyenne_s2 is None: score += 5
+
+    # Si l'année est terminée, les absences sont définitives → score plus sévère
+    if _is_annee_terminee(inscription):
+        if inscription.moyenne_s1 is None and inscription.moyenne_s2 is None:
+            score += 20  # abandon définitif confirmé
+        elif inscription.moyenne_s2 is None:
+            score += 10  # décrochage S2 confirmé
 
     score = min(score, 100)
 
@@ -243,8 +290,8 @@ class RiskPredictor:
         self.pipeline = Pipeline([
             ("scaler", StandardScaler()),
             ("clf", RandomForestClassifier(
-                n_estimators=50,        # ✅ allégé : était 120
-                max_depth=6,            # ✅ allégé : était 8
+                n_estimators=50,
+                max_depth=6,
                 min_samples_leaf=2,
                 class_weight="balanced",
                 random_state=42,
@@ -262,7 +309,10 @@ class RiskPredictor:
             logger.warning("RiskPredictor: pas assez de données (%d)", len(inscriptions))
             return {"success": False, "reason": "Pas assez de données (min 10)"}
 
-        X = _build_dataframe(inscriptions)
+        # On entraîne avec les features contextuelles réelles de chaque inscription
+        X = pd.DataFrame([
+            _extract_features(ins, _is_annee_terminee(ins)) for ins in inscriptions
+        ])
         y = [_label_risk(ins) for ins in inscriptions]
 
         if len(set(y)) < 2:
@@ -282,7 +332,6 @@ class RiskPredictor:
         self.pipeline.fit(X, y)
         self.is_trained = True
 
-        # ✅ feature_importances_ correct pour RandomForest
         clf = self.pipeline.named_steps["clf"]
         self.feature_importances_ = dict(
             sorted(
@@ -310,15 +359,17 @@ class RiskPredictor:
 
     # ── Prédiction batch ─────────────────────
 
-    def predict_risk_batch(self, inscriptions: list) -> list[dict]:
+    def predict_risk_batch(self, inscriptions: list,
+                           annee_terminee: bool = False) -> list[dict]:
         """
         Prédit le risque pour toute une liste en UN seul appel sklearn.
         10x–50x plus rapide que N appels individuels.
+        annee_terminee : si True, les features sont durcies (absences définitives).
         """
         if not self.is_trained:
             raise NotFittedError("RiskPredictor non entraîné.")
 
-        X          = _build_dataframe(inscriptions)
+        X          = _build_dataframe(inscriptions, annee_terminee)
         labels     = self.pipeline.predict(X)
         proba_arrs = self.pipeline.predict_proba(X)
         classes    = self.pipeline.classes_
@@ -335,7 +386,8 @@ class RiskPredictor:
 
     # ── Probabilité d'abandon ────────────────
 
-    def predict_abandon(self, inscription, risk_result: dict) -> dict:
+    def predict_abandon(self, inscription, risk_result: dict,
+                        annee_terminee: bool = False) -> dict:
         proba_critique = risk_result.get("probas", {}).get("critique", 0.0)
 
         m           = inscription.moyenne_annuelle or inscription.moyenne_s1 or inscription.moyenne_s2
@@ -345,6 +397,23 @@ class RiskPredictor:
         proba_abandon = proba_critique * 0.7
         if aucune_note: proba_abandon = max(proba_abandon, 0.85)
         if tres_faible: proba_abandon = max(proba_abandon, 0.70)
+
+        # ── Durcissement si l'année est terminée ────────────────────────
+        # Les absences ne sont plus "en attente" — ce sont des faits définitifs
+        if annee_terminee:
+            if aucune_note:
+                # Aucune note sur toute l'année terminée = abandon certain
+                proba_abandon = 1.0
+            elif inscription.moyenne_s2 is None:
+                # S2 absent après fin d'année = décrochage très probable
+                proba_abandon = max(proba_abandon, 0.90)
+            if m is not None and m < 10:
+                # Échec définitif confirmé
+                proba_abandon = max(proba_abandon, 0.75)
+            if m is not None and m < 6:
+                # Échec sévère définitif
+                proba_abandon = max(proba_abandon, 0.85)
+
         proba_abandon = round(min(proba_abandon, 1.0), 4)
 
         if proba_abandon >= 0.7:   niveau = "abandon_probable"
@@ -355,7 +424,8 @@ class RiskPredictor:
 
     # ── Recommandations ──────────────────────
 
-    def recommend(self, inscription, risk_result: dict, abandon_result: dict) -> list:
+    def recommend(self, inscription, risk_result: dict,
+                  abandon_result: dict, annee_terminee: bool = False) -> list:
         niveau_risque  = risk_result.get("niveau_risque",  "ok")
         niveau_abandon = abandon_result.get("niveau_abandon", "pas_de_risque")
 
@@ -368,6 +438,33 @@ class RiskPredictor:
                 "action": "Contacter l'étudiant immédiatement pour comprendre la situation et prévenir l'abandon définitif.",
                 "categorie": "Action immédiate",
             })
+
+        # ── Recommandations spécifiques fin d'année ──────────────────────
+        if annee_terminee:
+            m = inscription.moyenne_annuelle or inscription.moyenne_s1 or inscription.moyenne_s2
+            aucune_note = inscription.moyenne_s1 is None and inscription.moyenne_s2 is None
+
+            if aucune_note:
+                recos.insert(0, {
+                    "priorite": "critique",
+                    "titre": "Abandon confirmé — année terminée",
+                    "action": "L'étudiant n'a aucune note sur une année terminée. Déclencher la procédure de suivi post-abandon et contacter la famille si nécessaire.",
+                    "categorie": "Action immédiate",
+                })
+            elif inscription.moyenne_s2 is None:
+                recos.insert(0, {
+                    "priorite": "critique",
+                    "titre": "Décrochage S2 confirmé",
+                    "action": "L'étudiant a disparu en cours d'année. Analyser les causes et proposer une réorientation ou un rattrapage l'année suivante.",
+                    "categorie": "Action immédiate",
+                })
+            if m is not None and m < 10:
+                recos.append({
+                    "priorite": "critique",
+                    "titre": "Échec définitif — décision de jury requise",
+                    "action": "Les résultats sont définitifs. Préparer le dossier pour la commission de jury (redoublement, réorientation, exclusion).",
+                    "categorie": "Administratif",
+                })
 
         matieres_echouees = [
             r.matiere.nom_matiere for r in inscription.resultats
@@ -400,7 +497,7 @@ class RiskPredictor:
                 "categorie": "Suivi",
             })
 
-        if inscription.moyenne_s1 is not None and inscription.moyenne_s2 is None:
+        if inscription.moyenne_s1 is not None and inscription.moyenne_s2 is None and not annee_terminee:
             recos.append({
                 "priorite": "moderee",
                 "titre": "Absence de notes au S2",
@@ -415,10 +512,19 @@ class RiskPredictor:
     # ── Heuristique fallback ──────────────────
 
     @staticmethod
-    def _heuristic_single(inscription) -> dict:
+    def _heuristic_single(inscription, annee_terminee: bool = False) -> dict:
         label     = _label_risk(inscription)
         proba_map = {"ok": 0.05, "surveillance": 0.20, "modere": 0.50, "critique": 0.80}
-        p         = proba_map.get(label, 0.1)
+
+        # Durcir si année terminée
+        if annee_terminee:
+            aucune_note = inscription.moyenne_s1 is None and inscription.moyenne_s2 is None
+            if aucune_note and label != "critique":
+                label = "critique"
+            if label == "critique":
+                proba_map["critique"] = 0.95
+
+        p = proba_map.get(label, 0.1)
         return {
             "niveau_risque": label,
             "confiance":     None,
@@ -435,12 +541,13 @@ class MLEngine:
     Point d'entrée unique du module ML — singleton `ml_engine`.
 
     predict(inscription)          → 1 étudiant
-    predict_batch(inscriptions)   → N étudiants en 1 seul appel RF ✅ rapide
+    predict_batch(inscriptions)   → N étudiants en 1 seul appel RF (rapide)
     train(inscriptions)           → entraîne + sauvegarde
     auto_train_if_needed(fn)      → appelé au démarrage dans __init__.py
 
-    ✅ CORRECTION : predict_batch ne doit être appelé QU'UNE SEULE FOIS
-    par route, puis le résultat indexé avec ml_index() pour être réutilisé.
+    Nouveauté v2 :
+    · Détecte automatiquement si l'année est terminée via inscription.annee.date_fin
+    · Durcit les prédictions en conséquence (absences = faits définitifs)
 
     Exemple correct dans les routes :
         ml_results_list = predict_batch(inscriptions)
@@ -518,34 +625,63 @@ class MLEngine:
         return results[0] if results else self._fallback(inscription)
 
     # ── Prédiction batch ─────────────────────
-    # ✅ UN SEUL APPEL PAR ROUTE — résultat indexé via ml_index()
 
     def predict_batch(self, inscriptions: list) -> list[dict]:
         """
         Prédit pour une liste entière en UN seul appel sklearn.
-        ✅ N'appeler qu'UNE SEULE FOIS par route, puis indexer avec ml_index().
+        Détecte automatiquement si l'année est terminée.
+        N'appeler qu'UNE SEULE FOIS par route, puis indexer avec ml_index().
         """
         if not inscriptions:
             return []
+
+        # ── Détection automatique de l'état de l'année ──────────────────
+        annee_terminee = False
+        try:
+            annee = inscriptions[0].annee
+            if annee and annee.date_fin:
+                date_fin = annee.date_fin
+                if hasattr(date_fin, "date"):
+                    date_fin = date_fin.date()
+                annee_terminee = date_fin < date.today()
+                if annee_terminee:
+                    logger.info(
+                        "predict_batch — année '%s' terminée le %s → prédictions durcies",
+                        getattr(annee, "libelle", "?"), date_fin,
+                    )
+        except Exception:
+            pass
 
         source = "ml"
 
         if self.risk_predictor.is_trained:
             try:
-                risk_results = self.risk_predictor.predict_risk_batch(inscriptions)
+                risk_results = self.risk_predictor.predict_risk_batch(
+                    inscriptions, annee_terminee=annee_terminee
+                )
             except Exception as e:
                 logger.warning("predict_risk_batch échoué : %s — fallback heuristique", e)
-                risk_results = [RiskPredictor._heuristic_single(ins) for ins in inscriptions]
+                risk_results = [
+                    RiskPredictor._heuristic_single(ins, annee_terminee)
+                    for ins in inscriptions
+                ]
                 source = "heuristic"
         else:
-            risk_results = [RiskPredictor._heuristic_single(ins) for ins in inscriptions]
+            risk_results = [
+                RiskPredictor._heuristic_single(ins, annee_terminee)
+                for ins in inscriptions
+            ]
             source = "heuristic"
 
         results = []
         for ins, risk_result in zip(inscriptions, risk_results):
-            abandon_result = self.risk_predictor.predict_abandon(ins, risk_result)
+            abandon_result = self.risk_predictor.predict_abandon(
+                ins, risk_result, annee_terminee=annee_terminee
+            )
             try:
-                recos = self.risk_predictor.recommend(ins, risk_result, abandon_result)
+                recos = self.risk_predictor.recommend(
+                    ins, risk_result, abandon_result, annee_terminee=annee_terminee
+                )
             except Exception:
                 recos = []
             results.append(self._build_result(risk_result, abandon_result, recos, source))
@@ -553,7 +689,6 @@ class MLEngine:
         return results
 
     # ── Index par id_inscription ──────────────
-    # ✅ NOUVEAU — évite les appels multiples dans les routes
 
     def predict_batch_indexed(self, inscriptions: list) -> dict:
         """
@@ -585,9 +720,10 @@ class MLEngine:
         }
 
     def _fallback(self, inscription) -> dict:
-        risk    = RiskPredictor._heuristic_single(inscription)
-        abandon = self.risk_predictor.predict_abandon(inscription, risk)
-        recos   = self.risk_predictor.recommend(inscription, risk, abandon)
+        annee_terminee = _is_annee_terminee(inscription)
+        risk    = RiskPredictor._heuristic_single(inscription, annee_terminee)
+        abandon = self.risk_predictor.predict_abandon(inscription, risk, annee_terminee)
+        recos   = self.risk_predictor.recommend(inscription, risk, abandon, annee_terminee)
         return self._build_result(risk, abandon, recos, "heuristic")
 
     # ── Utilitaires ──────────────────────────

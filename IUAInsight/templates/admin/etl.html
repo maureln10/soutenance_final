@@ -1,59 +1,258 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="container-fluid py-4">
-  <h4 class="mb-1"><i class="bi bi-database-gear me-2"></i>Connexion & Lancement ETL</h4>
-  <p class="text-muted mb-4">Configurer la source OLTP et synchroniser le Data Warehouse.</p>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #eef2f7;
+  min-height: 100vh;
+  color: #1e2d3d;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  display: inline-block;
+}
+h2::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+  margin-bottom: 24px;
+}
+
+.container-fluid { padding: 24px 28px; }
+
+.card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.09) !important;
+}
+
+.card-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e8eef6 !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e2d3d;
+  padding: 14px 20px !important;
+}
+.card-body { padding: 20px !important; }
+
+/* Form labels & inputs */
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4a6078;
+  margin-bottom: 5px;
+  display: block;
+}
+.form-control {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  border: 1.5px solid #dde5f0;
+  border-radius: 6px;
+  color: #1e2d3d;
+  background: #ffffff;
+  padding: 8px 10px;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+.form-control::placeholder { color: #b0bec5; }
+
+/* Alert */
+.alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  border: none;
+}
+.alert-success {
+  background: #f0fdf4;
+  border-left: 4px solid #22c55e;
+  color: #166534;
+}
+.alert-danger {
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+.alert i { font-size: 1.1rem; flex-shrink: 0; }
+
+/* Buttons */
+.btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.1s;
+}
+.btn:active { transform: scale(0.98); }
+
+.btn-outline-primary {
+  background: #ffffff;
+  border: 1.5px solid #3b82f6;
+  color: #3b82f6;
+}
+.btn-outline-primary:hover {
+  background: #eff6ff;
+  box-shadow: 0 2px 8px rgba(59,130,246,.15);
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: #ffffff;
+  border: 1.5px solid #3b82f6;
+}
+.btn-primary:hover {
+  background: #2563eb;
+  box-shadow: 0 2px 10px rgba(59,130,246,.3);
+}
+
+/* Section label */
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8da0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+
+/* Info badge */
+.info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #4a6078;
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 4px 12px;
+  margin-top: 16px;
+}
+.info-badge strong { color: #1e2d3d; }
+
+/* Grid pour les champs */
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: fit-content;
+}
+
+@media (max-width: 768px) {
+  .container-fluid { padding: 14px; }
+  .fields-grid { grid-template-columns: 1fr 1fr; }
+  .btn-group { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .fields-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="container-fluid">
+
+  <h2 class="mb-3">Connexion</h2><br><br>
+  <p class="text-muted">Configurer la source OLTP et synchroniser le Data Warehouse.</p>
 
   {% if message %}
-  <div class="alert alert-{{ 'success' if succes else 'danger' }} d-flex align-items-center">
-    <i class="bi bi-{{ 'check-circle' if succes else 'x-circle' }} me-2 fs-5"></i>
+  <div class="alert alert-{{ 'success' if succes else 'danger' }}">
+    <i class="bi bi-{{ 'check-circle' if succes else 'x-circle' }}"></i>
     <span>{{ message }}</span>
   </div>
   {% endif %}
 
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-      <h6 class="fw-bold mb-3 text-uppercase text-muted" style="font-size:.75rem;letter-spacing:.08em">
-        Paramètres de connexion (BD source OLTP)
-      </h6>
+  <div class="card mb-4">
+    <div class="card-header">Paramètres de connexion (BD source OLTP)</div>
+    <div class="card-body">
       <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="row g-3 mb-4">
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Hôte</label>
+
+        <div class="fields-grid">
+          <div>
+            <label class="form-label">Hôte</label>
             <input type="text" name="host" class="form-control" value="{{ host }}" placeholder="localhost">
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Utilisateur</label>
+          <div>
+            <label class="form-label">Utilisateur</label>
             <input type="text" name="user" class="form-control" value="{{ user }}" placeholder="root">
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Mot de passe</label>
+          <div>
+            <label class="form-label">Mot de passe</label>
             <input type="password" name="password" class="form-control" placeholder="(vide si aucun)">
           </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Nom de la BD</label>
+          <div>
+            <label class="form-label">Nom de la BD</label>
             <input type="text" name="db_name" class="form-control" value="{{ db_name }}" placeholder="lmd1">
           </div>
         </div>
 
-        <div class="d-flex gap-3">
+        <div class="btn-group">
           <button type="submit" name="action" value="tester_connexion" class="btn btn-outline-primary">
-            <i class="bi bi-plug me-1"></i> Tester la connexion
+            <i class="bi bi-plug"></i> Tester la connexion
           </button>
           <button type="submit" name="action" value="lancer_etl" class="btn btn-primary">
-            <i class="bi bi-lightning-charge me-1"></i> Lancer l'ETL
+            <i class="bi bi-lightning-charge"></i> Lancer l'ETL
           </button>
         </div>
       </form>
+
+      {% if annee_active %}
+      <div class="info-badge">
+        <i class="bi bi-calendar-check" style="color:#3b82f6"></i>
+        Année active : <strong>{{ annee_active.libelle }}</strong> — l'ETL extraira les données de cette année.
+      </div>
+      {% endif %}
     </div>
   </div>
 
-  {% if annee_active %}
-  <p class="text-muted mt-3 small">
-    <i class="bi bi-calendar-check me-1"></i>
-    Année active : <strong>{{ annee_active.libelle }}</strong> — l'ETL extraira les données de cette année.
-  </p>
-  {% endif %}
 </div>
+
 {% endblock %}

@@ -61,16 +61,15 @@ h2::after {
 
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
 
 .card-header {
@@ -114,7 +113,6 @@ h2::after {
   vertical-align: middle;
 }
 
-/* ── Badges statut ── */
 .badge-statut {
   display: inline-flex;
   align-items: center;
@@ -129,7 +127,19 @@ h2::after {
 .badge-modere       { background: #fff7ed; color: #c2410c; }
 .badge-surveillance { background: #fefce8; color: #a16207; }
 
-/* ── Bouton Voir ── */
+/* Badge mode_all */
+.badge-dettes {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 20px;
+  white-space: nowrap;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .btn-voir {
   display: inline-flex;
   align-items: center;
@@ -173,7 +183,6 @@ h2::after {
 }
 .table-responsive::-webkit-scrollbar { display: none; }
 
-/* ── Toast ── */
 #toast-matieres {
   position: fixed;
   top: 20px;
@@ -192,9 +201,9 @@ h2::after {
   #toast-matieres { right: 12px; width: calc(100vw - 24px); }
 }
 </style>
+
 <br>
 
-<!-- ── Toast container ── -->
 <div id="toast-matieres"></div>
 
 <div class="container-fluid">
@@ -259,7 +268,9 @@ h2::after {
   </form>
 
   <div class="mb-3">
-    <span style="font-weight:700;">Matières à échec</span>
+    <span style="font-weight:700;">
+      {% if mode_all %}Matières avec dettes{% else %}Matières à échec{% endif %}
+    </span>
     <p class="text-muted">
       {{ nb_matieres }} matière{% if nb_matieres > 1 %}s{% endif %}
     </p>
@@ -274,7 +285,7 @@ h2::after {
           <th>Filière</th>
           <th>Matière</th>
           <th>Spécialité</th>
-          <th>Nombre d'ajournés</th>
+          <th>{{ "Admis endettés" if mode_all else "Nombre d'ajournés" }}</th>
           <th>Professeur</th>
           <th>Téléphone</th>
           <th>Niveau</th>
@@ -290,7 +301,15 @@ h2::after {
           <td>{{ s.filiere }}</td>
           <td>{{ s.matiere }}</td>
           <td>{{ s.specialite }}</td>
-          <td>{{ s.ajournes }}</td>
+          <td>
+            {% if mode_all %}
+              <span class="badge-dettes">
+                {{ s.ajournes }}
+              </span>
+            {% else %}
+              {{ s.ajournes }}
+            {% endif %}
+          </td>
           <td>{{ s.professeur }}</td>
           <td>{{ s.telephone }}</td>
           <td>{{ s.niveau }}</td>
@@ -331,13 +350,13 @@ h2::after {
 
           <!-- Action -->
           <td>
-    <a href="{{ url_for('ajournes_matiere', id_matiere=s['id_matiere'],
-                    filiere=filiere_selected,
-                    niveau=niveau_selected,
-                    semestre=semestre_selected) }}"
-   class="btn-voir">
-  <i class="bi bi-eye"></i> Voir
-</a>
+            <a href="{{ url_for('ajournes_matiere', id_matiere=s['id_matiere'],
+                            filiere=filiere_selected,
+                            niveau=niveau_selected,
+                            semestre=semestre_selected) }}"
+               class="btn-voir">
+              <i class="bi bi-eye"></i> Voir
+            </a>
           </td>
         </tr>
         {% else %}
@@ -370,7 +389,8 @@ h2::after {
 <script type="application/json" id="toast-data">
 {
   "nb_matieres":    {{ nb_matieres        | tojson }},
-  "total_ajournes": {{ nb_etudiants_echec | tojson }}
+  "total_ajournes": {{ nb_etudiants_echec | tojson }},
+  "mode_all":       {{ mode_all           | tojson }}
 }
 </script>
 
@@ -428,7 +448,7 @@ h2::after {
 
   /* ── Toasts ── */
   (function () {
-    const { nb_matieres, total_ajournes } = JSON.parse(
+    const { nb_matieres, total_ajournes, mode_all } = JSON.parse(
       document.getElementById('toast-data').textContent
     );
 
@@ -442,19 +462,21 @@ h2::after {
         border: '#ef4444',
         color:  '#991b1b',
         icon:   'bi-x-circle-fill',
-        label:  'Matières à échec',
-        msg:    `${nb_matieres} matière${nb_matieres > 1 ? 's' : ''} en situation d'échec détectée${nb_matieres > 1 ? 's' : ''}.`
+        label:  mode_all ? 'Matières avec dettes' : 'Matières à échec',
+        msg:    `${nb_matieres} matière${nb_matieres > 1 ? 's' : ''} ${mode_all ? 'avec étudiants endettés' : "en situation d'échec"} détectée${nb_matieres > 1 ? 's' : ''}.`
       });
     }
 
     if (total_ajournes > 0) {
+      const label = mode_all ? 'Admis endettés' : 'Étudiants ajournés';
+      const mot   = mode_all ? 'endetté' : 'ajourné';
       messages.push({
-        bg:     '#fef2f2',
-        border: '#ef4444',
-        color:  '#991b1b',
-        icon:   'bi-exclamation-circle-fill',
-        label:  'Étudiants ajournés',
-        msg:    `${total_ajournes} étudiant${total_ajournes > 1 ? 's' : ''} ajourné${total_ajournes > 1 ? 's' : ''} sur ces matières.`
+        bg:     mode_all ? '#eff6ff' : '#fef2f2',
+        border: mode_all ? '#3b82f6' : '#ef4444',
+        color:  mode_all ? '#1d4ed8' : '#991b1b',
+        icon:   mode_all ? 'bi-credit-card-fill' : 'bi-exclamation-circle-fill',
+        label:  label,
+        msg:    `${total_ajournes} étudiant${total_ajournes > 1 ? 's' : ''} ${mot}${total_ajournes > 1 ? 's' : ''} sur ces matières.`
       });
     }
 

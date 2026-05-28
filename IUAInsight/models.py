@@ -302,9 +302,9 @@ class Inscription(db.Model):
 
     # ── Helpers ──────────────────────────────────────────────────
 
-    def _credits_requis(self):      return self.niveau.credits_requis    if self.niveau else 60
-    def _credits_admission(self):   return self.niveau.credits_admission  if self.niveau else 47
-    def _credits_par_semestre(self):return self._credits_requis() // 2
+    def _credits_requis(self):       return self.niveau.credits_requis    if self.niveau else 60
+    def _credits_admission(self):    return self.niveau.credits_admission  if self.niveau else 47
+    def _credits_par_semestre(self): return self._credits_requis() // 2
 
     def _semestres_du_niveau(self):
         if not self.niveau or not self.niveau.semestres:
@@ -347,33 +347,78 @@ class Inscription(db.Model):
 
     @property
     def statut_simple(self):
-        if self.est_redoublant:
-            return "Redoublant"
-        if not self._a_notes_s1() and not self._a_notes_s2():
+        a_s1 = self._a_notes_s1()
+        a_s2 = self._a_notes_s2()
+
+        # Abandon : aucune note
+        if not a_s1 and not a_s2:
             return "Abandon"
-        if not self._a_notes_s1() or self.moyenne_s1 is None:
-            return "En cours"
 
-        seuil_sem   = self._credits_par_semestre()
-        seuil_total = self._credits_requis()
-        seuil_admis = self._credits_admission()
-        credits_s1  = self._credits_s1_apres_rattrapage()
-        rat_s1      = any(r.moyenne_rattrapage is not None for r in self.resultats if r.id_semestre == self._id_semestre_1())
-        s1_insuf    = credits_s1 < seuil_sem and not rat_s1
+        seuil_sem   = self._credits_par_semestre()  # 30
+        seuil_total = self._credits_requis()         # 60
+        seuil_admis = self._credits_admission()      # 47
 
-        if self._a_notes_s2() and self.moyenne_s2 is not None:
-            credits_s2 = self._credits_s2_apres_rattrapage()
-            rat_s2     = any(r.moyenne_rattrapage is not None for r in self.resultats if r.id_semestre == self._id_semestre_2())
-            s2_insuf   = credits_s2 < seuil_sem and not rat_s2
+        credits_s1 = self._credits_s1_apres_rattrapage() if a_s1 else 0
+        credits_s2 = self._credits_s2_apres_rattrapage() if a_s2 else 0
+
+        # Vérifie si rattrapage a eu lieu
+        rat_s1 = a_s1 and any(
+            r.moyenne_rattrapage is not None
+            for r in self.resultats
+            if r.id_semestre == self._id_semestre_1()
+        )
+        rat_s2 = a_s2 and any(
+            r.moyenne_rattrapage is not None
+            for r in self.resultats
+            if r.id_semestre == self._id_semestre_2()
+        )
+
+        # Ajourné = crédits insuffisants
+        # Si rattrapage passé et toujours insuffisant → reste Ajourné
+        s1_insuf = a_s1 and credits_s1 < seuil_sem
+        s2_insuf = a_s2 and credits_s2 < seuil_sem
+
+        # ── Bilan annuel complet (S1 + S2) ───────────────────────────
+        if a_s1 and a_s2 and self.moyenne_s1 is not None and self.moyenne_s2 is not None:
+            total = credits_s1 + credits_s2
+
+            # Admis : crédits complets
+            if total >= seuil_total:
+                return "Admis"
+
+            # Admis avec dettes : passe au niveau suivant mais doit rattraper
+            if total >= seuil_admis:
+                return "Admis (dettes)"
+
+            # Crédits < 47
+            if self.est_redoublant:
+                return "Redoublant"
+
+            # Ajourné selon semestre insuffisant
             if s1_insuf and s2_insuf: return "Ajourné S1 & S2"
             if s1_insuf:              return "Ajourné S1"
             if s2_insuf:              return "Ajourné S2"
-            total = credits_s1 + credits_s2
-            if total >= seuil_total:  return "Admis"
-            if total >= seuil_admis:  return "Admis (dettes)"
             return "Ajourné S1 & S2"
 
-        return "Ajourné S1" if s1_insuf else "En cours"
+        # ── S1 seulement (année en cours) ────────────────────────────
+        if a_s1 and self.moyenne_s1 is not None:
+            # Rattrapage S1 passé et toujours insuffisant
+            if rat_s1 and s1_insuf:
+                return "Ajourné S1"
+            if s1_insuf:
+                return "Ajourné S1"
+            return "En cours"
+
+        # ── S2 seulement ─────────────────────────────────────────────
+        if a_s2 and self.moyenne_s2 is not None:
+            # Rattrapage S2 passé et toujours insuffisant
+            if rat_s2 and s2_insuf:
+                return "Ajourné S2"
+            if s2_insuf:
+                return "Ajourné S2"
+            return "En cours"
+
+        return "En cours"
 
     @property
     def statut_passage(self):
@@ -415,14 +460,20 @@ class Inscription(db.Model):
 
     def _calculer_mention(self):
         m = self.moyenne_annuelle
-        if m is None:      self.mention = None
-        elif m >= 16:      self.mention = "Très Bien"
-        elif m >= 14:      self.mention = "Bien"
-        elif m >= 12:      self.mention = "Assez Bien"
-        elif m >= 10:      self.mention = "Passable"
-        else:              self.mention = None
+        if m is None:  self.mention = None
+        elif m >= 16:  self.mention = "Très Bien"
+        elif m >= 14:  self.mention = "Bien"
+        elif m >= 12:  self.mention = "Assez Bien"
+        elif m >= 10:  self.mention = "Passable"
+        else:          self.mention = None
 
     def recalculer_tout(self):
+        id_s1 = self._id_semestre_1()
+        id_s2 = self._id_semestre_2()
+        if id_s1:
+            self.moyenne_s1 = self.recalculer_moyenne_semestrielle(id_s1)
+        if id_s2:
+            self.moyenne_s2 = self.recalculer_moyenne_semestrielle(id_s2)
         self.recalculer_credits()
         self.recalculer_moyenne_annuelle()
         self._calculer_mention()
@@ -597,10 +648,15 @@ def etudiant_peut_avancer(etudiant_id, niveau_actuel_id):
 def creer_ou_maj_dette(inscription):
     if inscription.statut_simple != "Admis (dettes)":
         return
-    credits_manquants = inscription._credits_requis() - (inscription._credits_s1_apres_rattrapage() + inscription._credits_s2_apres_rattrapage())
+    credits_manquants = inscription._credits_requis() - (
+        inscription._credits_s1_apres_rattrapage() + inscription._credits_s2_apres_rattrapage()
+    )
     if credits_manquants <= 0:
         return
-    dette = DetteCreditNiveau.query.filter_by(id_etudiant=inscription.id_etudiant, id_niveau=inscription.id_niveau).first()
+    dette = DetteCreditNiveau.query.filter_by(
+        id_etudiant=inscription.id_etudiant,
+        id_niveau=inscription.id_niveau
+    ).first()
     if dette:
         dette.credits_dus        = credits_manquants
         dette.credits_rembourses = 0

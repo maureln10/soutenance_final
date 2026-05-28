@@ -72,36 +72,64 @@ class Respo_peda(db.Model, UserMixin):
 # ==========================
 class Rapport(db.Model):
     __tablename__ = 'rapport'
-    # Pas de __bind_key__ → va dans iua_app_db
 
-    id      = db.Column(db.Integer, primary_key=True)
-    titre   = db.Column(db.String(150), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    titre = db.Column(db.String(150), nullable=False)
     details = db.Column(db.String(250))
-    date    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    format  = db.Column(db.String(20))
-    path    = db.Column(db.String(250))
+    date = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+    format = db.Column(db.String(20))
+    path = db.Column(db.String(250))
+
+    
+    id_respo = db.Column(
+        db.Integer,
+        db.ForeignKey('respo_peda.id_respo'),
+        nullable=True
+    )
+
+    respo = db.relationship(
+        'Respo_peda',
+        backref='rapports'
+    )
 
     def __repr__(self):
         return f"<Rapport {self.titre}>"
-
 
 # ==========================
 # ALERTE
 # ==========================
 class Alerte(db.Model):
     __tablename__ = 'alerte'
-    # Pas de __bind_key__ → va dans iua_app_db
 
-    id_alerte   = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    message     = db.Column(db.String(255))
+    id_alerte = db.Column(
+        db.Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    message = db.Column(db.String(255))
     type_alerte = db.Column(db.String(100), unique=True)
-    date        = db.Column(db.DateTime)
-    vue         = db.Column(db.Boolean, default=False)
+    date = db.Column(db.DateTime)
+    vue = db.Column(db.Boolean, default=False)
+
+    # RELATION
+    id_respo = db.Column(
+        db.Integer,
+        db.ForeignKey('respo_peda.id_respo'),
+        nullable=True
+    )
+
+    respo = db.relationship(
+        'Respo_peda',
+        backref='alertes'
+    )
 
     def __repr__(self):
         return f"<Alerte {self.type_alerte}>"
-
-
 # ==========================
 # SAUVEGARDES
 # ==========================

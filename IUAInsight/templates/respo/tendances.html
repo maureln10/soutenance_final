@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #eef2f7;
+  background:  #f3f6fb;
   min-height: 100vh;
   color: #1e2d3d;
 }
@@ -37,17 +37,18 @@ h2::after {
 
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  /* ✦ CORRIGÉ : double couche de shadow bien visible */
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
+
 
 .card-header {
   background: #ffffff !important;
@@ -75,6 +76,7 @@ h2::after {
   .card-body { padding: 14px !important; }
 }
 </style>
+
 <br>
 
 <div class="container-fluid">

@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #eef2f7;
+  background:  #eef2f7;
   min-height: 100vh;
   color: #1e2d3d;
 }
@@ -37,18 +37,16 @@ h2::after {
 
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 2px 12px rgba(30, 45, 61, 0.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 45, 61, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
-
 .card.text-center .card-body {
   padding: 12px 8px !important;
   display: flex;
@@ -87,12 +85,7 @@ h2::after {
   border-radius: 50%;
   margin: 0 auto 4px auto;
 }
-/*
-.kpi-red   { border-top: 4px solid #ef4444 !important; }
-.kpi-amber { border-top: 4px solid #f59e0b !important; }
-.kpi-blue  { border-top: 4px solid #3b82f6 !important; }
-.kpi-green { border-top: 4px solid #10b981 !important; }
-*/
+
 .kpi-red   h4 { color: #ef4444; }
 .kpi-amber h4 { color: #f59e0b; }
 .kpi-blue  h4 { color: #3b82f6; }
@@ -193,13 +186,11 @@ h2::after {
 .data-table tbody tr:nth-child(even) td { background: #ffffff; }
 .data-table tbody tr:hover td { background: #fff5f5 !important; }
 
-/* ── Moyenne : valeur seule, sans barre ── */
 .moyenne-val { font-size: 0.84rem; font-weight: 600; white-space: nowrap; }
 .moyenne-val.bar-red   { color: #ef4444; }
 .moyenne-val.bar-amber { color: #f59e0b; }
 .moyenne-val.bar-green { color: #10b981; }
 
-/* ── Risque : badge + barre + pourcentage ── */
 .risk-cell {
   display: flex;
   flex-direction: column;
@@ -220,7 +211,6 @@ h2::after {
 .risk-badge.modere   { background: #fef3c7; color: #92400e; }
 .risk-badge.info     { background: #dbeafe; color: #1d4ed8; }
 
-/* Barre de risque dans la colonne Risque */
 .risk-bar-wrap {
   display: flex;
   align-items: center;
@@ -258,9 +248,7 @@ h2::after {
 .credits-label { font-weight: 600; }
 .credits-total { color: #8da0b8; }
 
-.dx1 { font-weight:bold;
-  font-size: 13px;
- }
+.dx1 { font-weight:bold; font-size: 13px; }
 .icon-sm { font-size: 0.65rem; }
 
 .matieres-toggle {
@@ -406,6 +394,7 @@ h2::after {
   .m1 { flex-direction: column; max-width: 100%; }
 }
 </style>
+
 <br>
 
 <div class="container-fluid">
@@ -475,7 +464,7 @@ h2::after {
     <div class="col-md-2">
       <div class="card text-center shadow-sm kpi-red">
         <div class="card-body">
-           <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-exclamation-triangle"></i>
           <h4>{{ niveaux_critiques }}</h4>
           <p>Niveau critique</p>
           {% if niveaux_critiques_liste %}
@@ -520,7 +509,7 @@ h2::after {
 
   <!-- Tableau -->
   <div class="mb-3">
-    <span class="dx1" >Étudiants à risque</span>
+    <span class="dx1">Étudiants à risque</span>
   </div>
 
   <div class="table-card">
@@ -529,7 +518,7 @@ h2::after {
       <table class="data-table">
         <thead>
           <tr>
-              <th>#</th>
+            <th>#</th>
             <th>Matricule</th>
             <th>Nom & Prénom</th>
             <th>Filière</th>
@@ -537,94 +526,97 @@ h2::after {
             <th>Niveau</th>
             <th>Moyenne</th>
             <th>Crédit validé</th>
-             <th>Matière échouée</th>
+            <th>Matière échouée</th>
+            {% if semestre_selected != 'all' %}
             <th>Niveau de risque</th>
             <th>Action</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
-       {% for e in etudiants %}
+          {% for e in etudiants %}
 
-  {% if e.moyenne < 8 %}
-    {% set bar_class = 'bar-red' %}
-    {% set taux_class = 'taux-red' %}
-  {% elif e.moyenne < 10 %}
-    {% set bar_class = 'bar-amber' %}
-    {% set taux_class = 'taux-amber' %}
-  {% else %}
-    {% set bar_class = 'bar-green' %}
-    {% set taux_class = 'taux-green' %}
-  {% endif %}
+            {% if e.moyenne < 8 %}
+              {% set bar_class = 'bar-red' %}
+              {% set taux_class = 'taux-red' %}
+            {% elif e.moyenne < 10 %}
+              {% set bar_class = 'bar-amber' %}
+              {% set taux_class = 'taux-amber' %}
+            {% else %}
+              {% set bar_class = 'bar-green' %}
+              {% set taux_class = 'taux-green' %}
+            {% endif %}
 
-  {% set bar_width = (e.taux_risque) | round | int %}
+            {% set bar_width = (e.taux_risque) | round | int %}
 
-  <tr>
-    <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
-    <td><strong>{{ e.matricule }}</strong></td>
-    <td>{{ e.nom }} {{ e.prenom }}</td>
-    <td>{{ e.filiere }}</td>
-    <td>{{ e.specialite }}</td>
-    <td>{{ e.niveau }}</td>
+            <tr>
+              <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
+              <td><strong>{{ e.matricule }}</strong></td>
+              <td>{{ e.nom }} {{ e.prenom }}</td>
+              <td>{{ e.filiere }}</td>
+              <td>{{ e.specialite }}</td>
+              <td>{{ e.niveau }}</td>
 
-    <td>
-      <span class="moyenne-val {{ bar_class }}">{{ e.moyenne }}/20</span>
-    </td>
+              <td>
+                <span class="moyenne-val {{ bar_class }}">{{ e.moyenne }}/20</span>
+              </td>
 
-    <td>
-      <span class="credits-label">{{ e.credits }}</span>
-      <span class="credits-total">/{{ e.credits_requis }}</span>
-    </td>
+              <td>
+                <span class="credits-label">{{ e.credits }}</span>
+                <span class="credits-total">/{{ e.credits_requis }}</span>
+              </td>
 
-    <td>
-      {% if e.nb_matieres > 0 %}
-        <button class="matieres-toggle" onclick="toggleMatieres(this)">
-          <i class="bi bi-chevron-right"></i>
-          {{ e.nb_matieres }} matière{{ 's' if e.nb_matieres > 1 }}
-        </button>
-        <ul class="matieres-list">
-          {% for m in e.matieres_rattrapage %}
-            <li>{{ m }}</li>
+              <td>
+                {% if e.nb_matieres > 0 %}
+                  <button class="matieres-toggle" onclick="toggleMatieres(this)">
+                    <i class="bi bi-chevron-right"></i>
+                    {{ e.nb_matieres }} matière{{ 's' if e.nb_matieres > 1 }}
+                  </button>
+                  <ul class="matieres-list">
+                    {% for m in e.matieres_rattrapage %}
+                      <li>{{ m }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <span class="empty-val">—</span>
+                {% endif %}
+              </td>
+
+              {% if semestre_selected != 'all' %}
+              <td>
+                {% set niv = 'critique' if e.score_risque >= 60
+                          else 'modere'       if e.score_risque >= 35
+                          else 'surveillance' if e.score_risque >= 15
+                          else 'ok' %}
+                <div class="risk-cell">
+                  <span class="risk-badge {{ niv }}">
+                    {% if niv == 'critique' %}⚠ Critique
+                    {% elif niv == 'modere' %}● Modéré
+                    {% elif niv == 'surveillance' %}◉ Surveillance
+                    {% else %}✓ OK
+                    {% endif %}
+                  </span>
+                  <div class="risk-bar-wrap">
+                    <div class="risk-bar-track">
+                      <div class="risk-bar-fill bar-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}"
+                           style="--w: {{ e.score_risque }}%"></div>
+                    </div>
+                    <span class="taux-label taux-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}">
+                      {{ e.score_risque }}%
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                <a href="{{ url_for('detail_risque', matricule=e.matricule) }}" class="btn-voir">
+                  <i class="bi bi-eye"></i> Détail
+                </a>
+              </td>
+              {% endif %}
+
+            </tr>
           {% endfor %}
-        </ul>
-      {% else %}
-        <span class="empty-val">—</span>
-      {% endif %}
-    </td>
-
-    <td>
-      {% set niv = 'critique' if e.score_risque >= 60
-                else 'modere'       if e.score_risque >= 35
-                else 'surveillance' if e.score_risque >= 15
-                else 'ok' %}
-      <div class="risk-cell">
-        <span class="risk-badge {{ niv }}">
-          {% if niv == 'critique' %}⚠ Critique
-          {% elif niv == 'modere' %}● Modéré
-          {% elif niv == 'surveillance' %}◉ Surveillance
-          {% else %}✓ OK
-          {% endif %}
-        </span>
-        <div class="risk-bar-wrap">
-          <div class="risk-bar-track">
-            <div class="risk-bar-fill bar-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}"
-                 style="--w: {{ e.score_risque }}%"></div>
-          </div>
-          <span class="taux-label taux-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}">
-            {{ e.score_risque }}%
-          </span>
-        </div>
-      </div>
-    </td>
-
-    <td>
-      <a href="{{ url_for('detail_risque', matricule=e.matricule) }}" class="btn-voir">
-        <i class="bi bi-eye"></i> Détail
-      </a>
-    </td>
-
-  </tr>
-{% endfor %}
-          
         </tbody>
       </table>
     </div>

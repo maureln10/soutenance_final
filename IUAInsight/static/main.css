@@ -3,7 +3,7 @@
    Aesthetic: Refined Academic / Dark Sidebar + Clean Content
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* ── Variables ─────────────────────────────────────────────── */
 :root {
@@ -13,7 +13,7 @@
   --accent-soft:      rgba(79, 124, 255, 0.10);
   --accent-glow:      rgba(79, 124, 255, 0.30);
   --accent-hover:     #3a68f5;
-  --sidebar-text:     #8a98b8;
+  --sidebar-text:    #becace;
   --sidebar-hover:    rgba(255, 255, 255, 0.04);
   --sidebar-active:   rgba(79, 124, 255, 0.16);
   --section-title:    #3d4a5e;
@@ -42,7 +42,8 @@ a.notif-btn {
 html, body {
   height: 100%;
   font-family: 'Inter', sans-serif;
-  font-size: 13.5px;
+  font-size: 16px;           /* ↑ 13.5px → 16px */
+  font-weight: 500;
   color: var(--text-primary);
   background: var(--content-bg);
   -webkit-font-smoothing: antialiased;
@@ -57,6 +58,8 @@ a {
 p {
   color: var(--text-secondary);
   line-height: 1.6;
+  font-weight: 500;
+  font-size: 15px;           /* ↑ héritage → 15px */
 }
 
 /* ── Layout ─────────────────────────────────────────────────── */
@@ -97,11 +100,11 @@ p {
 
 /* Logo */
 .logo {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 17px;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;           /* ↑ 17px → 20px */
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   padding: 26px 22px 22px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
@@ -111,7 +114,7 @@ p {
 
 .logo i {
   color: var(--accent);
-  font-size: 1.2rem;
+  font-size: 1.35rem;        /* ↑ 1.2rem → 1.35rem */
 }
 
 /* Nav */
@@ -123,8 +126,8 @@ p {
 
 .section-title {
   display: block;
-  font-size: 0.62rem;
-  font-weight: 600;
+  font-size: 0.72rem;        /* ↑ 0.62rem → 0.72rem */
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--section-title);
@@ -136,18 +139,18 @@ p {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 22px;
+  padding: 10px 22px;
   color: var(--sidebar-text);
-  font-size: 0.83rem;
-  font-weight: 400;
+  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-weight: 500;
   transition: color var(--transition), background var(--transition);
   position: relative;
   white-space: nowrap;
 }
 
 .menu-item i {
-  font-size: 0.95rem;
-  width: 18px;
+  font-size: 1.1rem;         /* ↑ 0.95rem → 1.1rem */
+  width: 20px;
   flex-shrink: 0;
   opacity: 0.75;
   transition: opacity var(--transition), transform var(--transition);
@@ -166,7 +169,7 @@ p {
 .menu-item.active {
   color: #ffffff;
   background: var(--sidebar-active);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .menu-item.active::before {
@@ -198,17 +201,17 @@ p {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  font-size: 0.83rem;
-  font-weight: 500;
-  color: #6b7a96;
+  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-weight: 600;
+  color: white;
   background: transparent;
   transition: color var(--transition), background var(--transition);
   cursor: pointer;
   border: none;
-  font-family: inherit;
+  font-family: 'Inter', sans-serif;
 }
 
-.logout-btn i { font-size: 0.95rem; }
+.logout-btn i { font-size: 1.1rem; }  /* ↑ 0.95rem → 1.1rem */
 
 .logout-btn:hover {
   color: #ff7b7b;
@@ -233,7 +236,7 @@ p {
   z-index: 9;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
-  padding: 10px 20px;
+  padding: 12px 20px;
   margin: 0 -28px 24px;
   display: flex;
   align-items: center;
@@ -242,7 +245,7 @@ p {
 }
 
 .content-section .logo {
-  font-size: 16px;
+  font-size: 18px;           /* ↑ 16px → 18px */
   padding: 0;
   border-bottom: none;
   color: var(--text-primary);
@@ -264,15 +267,15 @@ p {
 }
 
 .content-section strong {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.97rem;        /* ↑ 0.85rem → 0.97rem */
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .content-section small {
-  font-size: 0.72rem;
+  font-size: 0.83rem;        /* ↑ 0.72rem → 0.83rem */
   color: var(--text-secondary);
-  font-weight: 400;
+  font-weight: 500;
 }
 
 /* ── Page Content ───────────────────────────────────────────── */
@@ -323,18 +326,18 @@ p {
 }
 
 .stat-value {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.9rem;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 2.4rem;         /* ↑ 1.9rem → 2.4rem */
+  font-weight: 800;
   color: var(--text-primary);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.87rem;        /* ↑ 0.75rem → 0.87rem */
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   margin-top: 7px;
@@ -344,10 +347,10 @@ p {
 .badge-accent {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.83rem;        /* ↑ 0.72rem → 0.83rem */
+  font-weight: 700;
   background: var(--accent-soft);
   color: var(--accent);
   letter-spacing: 0.02em;
@@ -361,20 +364,21 @@ p {
 }
 
 .table thead th {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.82rem;        /* ↑ 0.7rem → 0.82rem */
+  font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 2px solid var(--border);
   background: transparent;
   white-space: nowrap;
 }
 
 .table tbody td {
-  padding: 11px 14px;
-  font-size: 0.875rem;
+  padding: 13px 16px;
+  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
+  font-weight: 500;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
@@ -396,10 +400,10 @@ p {
   border: none;
   border-radius: var(--radius-sm);
   color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.83rem;
-  font-weight: 500;
-  padding: 9px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-weight: 600;
+  padding: 10px 22px;
   cursor: pointer;
   transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
   box-shadow: 0 2px 10px var(--accent-glow);
@@ -425,10 +429,10 @@ p {
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.83rem;
-  font-weight: 500;
-  padding: 8px 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-weight: 600;
+  padding: 9px 20px;
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition), background var(--transition);
   display: inline-flex;
@@ -446,11 +450,12 @@ p {
 /* ── Form inputs ────────────────────────────────────────────── */
 .form-control,
 .form-select {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
+  font-weight: 500;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 9px 14px;
+  padding: 10px 16px;
   color: var(--text-primary);
   background: var(--card-bg);
   transition: border-color var(--transition), box-shadow var(--transition);
@@ -471,16 +476,17 @@ p {
 
 /* ── Section headings ───────────────────────────────────────── */
 .section-heading {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.35rem;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.65rem;        /* ↑ 1.35rem → 1.65rem */
+  font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 4px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
 }
 
 .section-sub {
-  font-size: 0.82rem;
+  font-size: 0.97rem;        /* ↑ 0.82rem → 0.97rem */
+  font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 22px;
   line-height: 1.5;
@@ -492,8 +498,9 @@ p {
   border: 1px solid rgba(79, 124, 255, 0.18);
   border-radius: 10px;
   color: var(--accent);
-  font-size: 0.875rem;
-  padding: 12px 16px;
+  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
+  font-weight: 500;
+  padding: 13px 18px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -564,7 +571,7 @@ p {
 .menu-badge {
   background: #ef4444;
   color: #fff;
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 20px;
@@ -582,9 +589,9 @@ p {
   background: #f0f4ff;
   border: 1px solid #ccd6f5;
   border-radius: 8px;
-  padding: 5px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  padding: 6px 14px;
+  font-size: 0.9rem;         /* ↑ 0.78rem → 0.9rem */
+  font-weight: 700;
   color: #3a57a7;
   white-space: nowrap;
 }
@@ -595,8 +602,8 @@ p {
   background: transparent;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  width: 36px;
-  height: 36px;
+  width: 40px;               /* ↑ 36px → 40px */
+  height: 40px;              /* ↑ 36px → 40px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,7 +619,7 @@ p {
   background: var(--accent-soft);
 }
 
-.notif-btn i { font-size: 0.95rem; }
+.notif-btn i { font-size: 1.1rem; }  /* ↑ 0.95rem → 1.1rem */
 
 .notif-badge {
   position: absolute;
@@ -620,10 +627,10 @@ p {
   right: -5px;
   background: #ef4444;
   color: #fff;
-  font-size: 0.6rem;
+  font-size: 0.7rem;         /* ↑ 0.6rem → 0.7rem */
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
+  min-width: 18px;           /* ↑ 16px → 18px */
+  height: 18px;              /* ↑ 16px → 18px */
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -641,15 +648,16 @@ p {
 }
 
 .user-info strong {
-  font-size: 0.83rem;
-  font-weight: 600;
+  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-weight: 700;
   color: var(--text-primary);
   display: block;
 }
 
 .user-info small {
-  font-size: 0.7rem;
+  font-size: 0.82rem;        /* ↑ 0.7rem → 0.82rem */
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 /* ── Utilities ──────────────────────────────────────────────── */
@@ -681,6 +689,7 @@ p {
 .mb-2 { margin-bottom: 8px; }
 .mb-3 { margin-bottom: 12px; }
 .mb-4 { margin-bottom: 16px; }
+
 /* ============================
    BADGE SCORE DE RISQUE
    ============================ */
@@ -688,10 +697,10 @@ p {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 10px;
+    padding: 4px 12px;       /* ↑ 3px 10px → 4px 12px */
     border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.83rem;      /* ↑ 0.72rem → 0.83rem */
+    font-weight: 700;
     letter-spacing: 0.03em;
     white-space: nowrap;
 }
@@ -714,11 +723,11 @@ p {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 24px;
+    width: 44px;             /* ↑ 38px → 44px */
+    height: 28px;            /* ↑ 24px → 28px */
     border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.87rem;      /* ↑ 0.75rem → 0.87rem */
+    font-weight: 800;
 }
 .score-pill.critique     { background: #fde8e8; color: #c0392b; }
 .score-pill.modere       { background: #fff3e0; color: #e67e22; }

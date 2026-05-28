@@ -40,14 +40,16 @@ h2::after {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  /* ✦ CORRIGÉ : double couche de shadow bien visible */
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.09) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
+ 
 
 .kpi-row { margin-bottom: 20px; }
 .kpi-row .col-md-2 { padding: 0 8px; margin-bottom: 16px; }
@@ -273,6 +275,7 @@ td { font-size: 0.8rem; color: #2d4057; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 <!-- ── Toast stack ── -->
 <div id="toast-stack"></div>

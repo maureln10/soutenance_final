@@ -1,9 +1,10 @@
 from datetime import datetime, date, timezone
 from flask import render_template, url_for, flash, redirect, request, send_file, abort, after_this_request
-from sqlalchemy import and_, or_, case, func, cast, String, extract, text
+from sqlalchemy import and_, or_, case, func, cast, String, extract, text, select
 from sqlalchemy.orm import joinedload, selectinload
 from flask_login import login_user, current_user, logout_user, login_required
 from IUAInsight import app, db, bcrypt
+from IUAInsight.services.annee_service import cloture_annee
 
 # ── Modèles OLTP (BD source : lmd1) ────────────────────────────────────────
 from IUAInsight.models import (
@@ -16,7 +17,7 @@ from IUAInsight.models import (
 # ── Modèles App (BD applicative : iua_app_db) ──────────────────────────────
 from IUAInsight.models_app import (
     Administrateur_sy, Respo_peda,
-    Rapport, Alerte, Sauvegarde
+    Rapport, Alerte 
 )
 
 import csv
@@ -104,9 +105,11 @@ def unauthorized(e):
 # CONTEXT PROCESSOR
 # ==========================
 @app.context_processor
+@app.context_processor
 def inject_globals():
     nb_alertes   = 0
     annee_active = None
+    alertes_dropdown = []
     layout       = 'layout.html'
 
     if current_user.is_authenticated:
@@ -116,10 +119,12 @@ def inject_globals():
             annee_active = None
         try:
             nb_alertes = db.session.query(func.count(Alerte.id_alerte)).scalar() or 0
+            alertes_dropdown = Alerte.query.order_by(Alerte.date.desc()).limit(10).all()
         except Exception:
             nb_alertes = 0
 
-    return dict(nb_alertes=nb_alertes, annee_active=annee_active, layout=layout)
+    return dict(nb_alertes=nb_alertes, annee_active=annee_active,
+                layout=layout, alertes_dropdown=alertes_dropdown)
 
 
 # ==========================
@@ -145,6 +150,7 @@ def _query_inscriptions_avec_relations(annee_id=None):
         joinedload(Inscription.filiere),
         joinedload(Inscription.specialite),
         joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
+        joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX statut_simple
         joinedload(Inscription.annee),
         selectinload(Inscription.resultats).joinedload(Resultat.matiere),
         selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -160,10 +166,10 @@ def appliquer_filtre_semestre(query, semestre_selected):
             parite = int(semestre_selected) % 2
             semestres_ids = db.session.query(Semestre.id_semestre)\
                 .filter(Semestre.ordre % 2 == parite)\
-                .subquery()
+                .scalar_subquery()
             sous_requete = db.session.query(Resultat.id_inscription)\
                 .filter(Resultat.id_semestre.in_(semestres_ids))\
-                .subquery()
+                .scalar_subquery()
             query = query.filter(Inscription.id_inscription.in_(sous_requete))
         except ValueError:
             pass
@@ -419,7 +425,8 @@ def tableau_de_bord():
         try:
             sem = int(semestre_filter)
             sous_requete = db.session.query(Resultat.id_inscription)\
-                .filter(Resultat.id_semestre == sem).subquery()
+                .filter(Resultat.id_semestre == sem)\
+                .scalar_subquery()
             filiere_agg_q = filiere_agg_q.filter(Inscription.id_inscription.in_(sous_requete))
         except ValueError:
             pass
@@ -677,29 +684,29 @@ def tableau_sp():
 
         stats_niveaux = []
         for niv in niveaux_a_afficher:
-            insc_niv       = [i for i in insc_grp if i.id_niveau == niv.id_niveau]
-            inscrits       = len(insc_niv)
-            credits_requis = niv.credits_requis    if niv else 60
-            credits_admis  = niv.credits_admission if niv else 47
-            credits_sem    = credits_requis // 2
+            insc_niv = [i for i in insc_grp if i.id_niveau == niv.id_niveau]
+            inscrits = len(insc_niv)
 
             if semestre_selected == "1":
-                admis        = sum(1 for i in insc_niv if i.moyenne_s1 is not None and i.credits_valides_s1 >= credits_sem)
+                admis        = sum(1 for i in insc_niv if i.moyenne_s1 is not None and i._credits_s1_apres_rattrapage() >= i._credits_par_semestre())
                 admis_dettes = None
-                ajournes     = sum(1 for i in insc_niv if i.statut_simple == "Ajourné S1")
                 redoublants  = None
+                ajournes     = sum(1 for i in insc_niv if i.moyenne_s1 is not None and i._credits_s1_apres_rattrapage() < i._credits_par_semestre())
+
             elif semestre_selected == "2":
-                admis        = sum(1 for i in insc_niv if i.moyenne_s2 is not None and i.credits_valides_s2 >= credits_sem)
+                admis        = sum(1 for i in insc_niv if i.moyenne_s2 is not None and i._credits_s2_apres_rattrapage() >= i._credits_par_semestre())
                 admis_dettes = None
-                ajournes     = sum(1 for i in insc_niv if i.statut_simple == "Ajourné S2")
                 redoublants  = None
+                ajournes     = sum(1 for i in insc_niv if i.moyenne_s2 is not None and i._credits_s2_apres_rattrapage() < i._credits_par_semestre())
+
             else:
-                redoublants  = sum(1 for i in insc_niv if i.est_redoublant)
-                admis        = sum(1 for i in insc_niv if not i.est_redoublant and i.credits_valides >= credits_requis)
-                admis_dettes = sum(1 for i in insc_niv if not i.est_redoublant and credits_admis <= i.credits_valides < credits_requis)
-                ajournes     = sum(1 for i in insc_niv if not i.est_redoublant and i.statut_simple in ("Ajourné S1", "Ajourné S2"))
+                redoublants  = sum(1 for i in insc_niv if i.statut_simple == "Redoublant")
+                admis        = sum(1 for i in insc_niv if i.statut_simple == "Admis")
+                admis_dettes = sum(1 for i in insc_niv if i.statut_simple == "Admis (dettes)")
+                ajournes     = sum(1 for i in insc_niv if "Ajourné" in i.statut_simple)
 
             presents = admis + (admis_dettes or 0) + ajournes + (redoublants or 0)
+
             ml_critiques_niv = sum(
                 1 for i in insc_niv
                 if ml_par_inscription.get(i.id_inscription)
@@ -710,6 +717,7 @@ def tableau_sp():
                 if ml_par_inscription.get(i.id_inscription)
                 and ml_par_inscription[i.id_inscription]["probabilite_abandon"] >= 0.7
             )
+
             stats_niveaux.append({
                 "niveau":        niv.libelle,
                 "inscrits":      inscrits,
@@ -722,6 +730,7 @@ def tableau_sp():
                 "ml_critiques":  ml_critiques_niv,
                 "ml_abandons":   ml_abandons_niv,
             })
+
         liste.append({"specialite": groupe["label"], "stats_niveaux": stats_niveaux})
 
     liste_flat = []
@@ -741,6 +750,7 @@ def tableau_sp():
                     "ml_critiques":  niv["ml_critiques"],
                     "ml_abandons":   niv["ml_abandons"],
                 })
+
     liste_flat.sort(key=lambda x: (x["taux_reussite"], -x["taux_echec"], x["inscrits"]), reverse=True)
 
     return render_template(
@@ -751,8 +761,6 @@ def tableau_sp():
         liste=liste_flat, annee_active=annee_active,
         title="Comparaison par spécialité et niveau"
     )
-
-
 # ==========================
 # TABLEAU FILIÈRE
 # ==========================
@@ -1143,25 +1151,56 @@ def tableau_m():
     for mid, nom_sp in specialite_query.distinct().all():
         specialites_par_matiere.setdefault(mid, set()).add(nom_sp)
 
-    rows_ajournes_agg = (
-        base_query
-        .with_entities(
-            Matiere.id_matiere,
-            func.count(func.distinct(Inscription.id_inscription)).label("nb_ajournes"),
+    # ── Comptage ajournés / admis endettés selon semestre ──────────────────
+    if semestre_selected == "all":
+        # Mode all : on compte les admis (dettes) par matière non validée
+        insc_q = _query_inscriptions_avec_relations(
+            annee_id=annee_active.id_annee if annee_active else None
         )
-        .filter(Resultat.moyenne < 10)
-        .group_by(Matiere.id_matiere)
-        .all()
-    )
-    ajournes_par_matiere = {row.id_matiere: row.nb_ajournes for row in rows_ajournes_agg}
+        try:
+            if filiere_selected != "all":
+                insc_q = insc_q.filter(Inscription.id_filiere == int(filiere_selected))
+            if niveau_selected != "all":
+                insc_q = insc_q.filter(Inscription.id_niveau == int(niveau_selected))
+        except ValueError:
+            pass
+        toutes_insc = insc_q.all()
 
-    nb_etudiants_echec_uniques = (
-        base_query
-        .with_entities(Inscription.id_inscription)
-        .filter(Resultat.moyenne < 10)
-        .distinct()
-        .count()
-    )
+        ajournes_par_matiere = {}
+        for insc in toutes_insc:
+            if insc.statut_simple != "Admis (dettes)":
+                continue
+            for r in insc.resultats:
+                if not r.credit_valide and r.matiere:
+                    mid = r.id_matiere
+                    ajournes_par_matiere[mid] = ajournes_par_matiere.get(mid, 0) + 1
+
+        nb_etudiants_echec_uniques = sum(
+            1 for insc in toutes_insc
+            if insc.statut_simple == "Admis (dettes)"
+        )
+    else:
+        # S1/S2 : logique SQL existante inchangée
+        rows_ajournes_agg = (
+            base_query
+            .with_entities(
+                Matiere.id_matiere,
+                func.count(func.distinct(Inscription.id_inscription)).label("nb_ajournes"),
+            )
+            .filter(Resultat.moyenne < 10)
+            .group_by(Matiere.id_matiere)
+            .all()
+        )
+        ajournes_par_matiere = {row.id_matiere: row.nb_ajournes for row in rows_ajournes_agg}
+
+        nb_etudiants_echec_uniques = (
+            base_query
+            .with_entities(Inscription.id_inscription)
+            .filter(Resultat.moyenne < 10)
+            .distinct()
+            .count()
+        )
+    # ───────────────────────────────────────────────────────────────────────
 
     stats = []
     for row in echec_agg:
@@ -1211,6 +1250,7 @@ def tableau_m():
         filiere_mode=(filiere_selected == "all"),
         nb_etudiants_echec=nb_etudiants_echec_uniques,
         nb_inscrits_total=nb_inscrits_total,
+        mode_all=(semestre_selected == "all"),
         title="Analyse par matière"
     )
 
@@ -1233,49 +1273,79 @@ def ajournes_matiere(id_matiere):
         .get_or_404(id_matiere)
     )
 
-    q = (
-        db.session.query(
-            Etudiant.matricule, Etudiant.nom, Etudiant.prenom,
-            Filiere.nom_filiere, Specialite.nom_specialite,
-            Niveau.libelle.label("niveau"), Resultat.moyenne
+    if semestre_selected == "all":
+        # Mode all → admis endettés sur cette matière
+        insc_q = _query_inscriptions_avec_relations(
+            annee_id=annee_active.id_annee if annee_active else None
         )
-        .join(Inscription, Etudiant.id_etudiant    == Inscription.id_etudiant)
-        .join(Resultat,    Inscription.id_inscription == Resultat.id_inscription)
-        .join(Filiere,     Inscription.id_filiere   == Filiere.id_filiere)
-        .join(Niveau,      Inscription.id_niveau    == Niveau.id_niveau)
-        .outerjoin(Specialite, Inscription.id_specialite == Specialite.id_specialite)
-        .filter(Resultat.id_matiere == id_matiere, Resultat.moyenne < 10)
-    )
+        try:
+            if filiere_selected != "all":
+                insc_q = insc_q.filter(Inscription.id_filiere == int(filiere_selected))
+            if niveau_selected != "all":
+                insc_q = insc_q.filter(Inscription.id_niveau == int(niveau_selected))
+        except ValueError:
+            pass
 
-    if annee_active:
-        q = q.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            q = q.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            q = q.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
-    try:
-        if semestre_selected != "all":
+        ajournes = []
+        for insc in insc_q.all():
+            if insc.statut_simple != "Admis (dettes)":
+                continue
+            for r in insc.resultats:
+                if r.id_matiere == id_matiere and not r.credit_valide:
+                    ajournes.append({
+                        "matricule":  insc.etudiant.matricule,
+                        "nom":        insc.etudiant.nom,
+                        "prenom":     insc.etudiant.prenom,
+                        "filiere":    insc.filiere.nom_filiere       if insc.filiere    else "—",
+                        "specialite": insc.specialite.nom_specialite if insc.specialite else "—",
+                        "niveau":     insc.niveau.libelle            if insc.niveau     else "—",
+                        "moyenne":    round(float(r.moyenne), 2)     if r.moyenne       else 0,
+                    })
+                    break
+        ajournes.sort(key=lambda x: x["moyenne"])
+
+    else:
+        # S1/S2 → logique existante inchangée
+        q = (
+            db.session.query(
+                Etudiant.matricule, Etudiant.nom, Etudiant.prenom,
+                Filiere.nom_filiere, Specialite.nom_specialite,
+                Niveau.libelle.label("niveau"), Resultat.moyenne
+            )
+            .join(Inscription, Etudiant.id_etudiant      == Inscription.id_etudiant)
+            .join(Resultat,    Inscription.id_inscription == Resultat.id_inscription)
+            .join(Filiere,     Inscription.id_filiere     == Filiere.id_filiere)
+            .join(Niveau,      Inscription.id_niveau      == Niveau.id_niveau)
+            .outerjoin(Specialite, Inscription.id_specialite == Specialite.id_specialite)
+            .filter(Resultat.id_matiere == id_matiere, Resultat.moyenne < 10)
+        )
+        if annee_active:
+            q = q.filter(Inscription.id_annee == annee_active.id_annee)
+        try:
+            if filiere_selected != "all":
+                q = q.filter(Inscription.id_filiere == int(filiere_selected))
+            if niveau_selected != "all":
+                q = q.filter(Inscription.id_niveau == int(niveau_selected))
+        except ValueError:
+            pass
+        try:
             q = q.filter(Resultat.id_semestre == int(semestre_selected))
-    except ValueError:
-        pass
+        except ValueError:
+            pass
 
-    rows = q.order_by(Resultat.moyenne.asc()).all()
-
-    ajournes = [
-        {
-            "matricule":  r.matricule,
-            "nom":        r.nom,
-            "prenom":     r.prenom,
-            "filiere":    r.nom_filiere,
-            "specialite": r.nom_specialite or "—",
-            "niveau":     r.niveau,
-            "moyenne":    round(float(r.moyenne), 2) if r.moyenne is not None else 0,
-        }
-        for r in rows
-    ]
+        rows = q.order_by(Resultat.moyenne.asc()).all()
+        ajournes = [
+            {
+                "matricule":  r.matricule,
+                "nom":        r.nom,
+                "prenom":     r.prenom,
+                "filiere":    r.nom_filiere,
+                "specialite": r.nom_specialite or "—",
+                "niveau":     r.niveau,
+                "moyenne":    round(float(r.moyenne), 2) if r.moyenne is not None else 0,
+            }
+            for r in rows
+        ]
 
     total_q = (
         db.session.query(func.count(func.distinct(Inscription.id_inscription)))
@@ -1292,7 +1362,8 @@ def ajournes_matiere(id_matiere):
         matiere=matiere, ajournes=ajournes, taux_echec=taux_echec,
         annee_active=annee_active, filiere_selected=filiere_selected,
         semestre_selected=semestre_selected, niveau_selected=niveau_selected,
-        title=f"Ajournés — {matiere.nom_matiere}"
+        mode_all=(semestre_selected == "all"),
+        title=f"{'Admis endettés' if semestre_selected == 'all' else 'Ajournés'} — {matiere.nom_matiere}"
     )
 
 
@@ -1366,20 +1437,20 @@ def ajournes_matiere_pdf(id_matiere):
     C_STRIPE = colors.HexColor("#f7fafd")
     C_WHITE  = colors.white
 
-    s_title = ParagraphStyle("title", fontName="Helvetica-Bold",
+    s_title  = ParagraphStyle("title",  fontName="Helvetica-Bold",
         fontSize=16, textColor=C_DARK, spaceAfter=6)
-    s_sub   = ParagraphStyle("sub", fontName="Helvetica",
-        fontSize=9, textColor=colors.HexColor("#8da0b8"), spaceAfter=8)
-    s_meta  = ParagraphStyle("meta", fontName="Helvetica",
+    s_sub    = ParagraphStyle("sub",    fontName="Helvetica",
+        fontSize=9,  textColor=colors.HexColor("#8da0b8"), spaceAfter=8)
+    s_meta   = ParagraphStyle("meta",   fontName="Helvetica",
         fontSize=8.5, textColor=C_DARK)
     s_footer = ParagraphStyle("footer", fontName="Helvetica",
         fontSize=7.5, textColor=colors.HexColor("#8da0b8"), alignment=TA_CENTER)
 
-    story      = []
-    annee_lib  = annee_active.libelle if annee_active else "—"
+    story       = []
+    annee_lib   = annee_active.libelle if annee_active else "—"
     filiere_lib = matiere.filiere.nom_filiere if matiere.filiere else "—"
-    prof_lib   = f"{matiere.professeur.nom} {matiere.professeur.prenom}" if matiere.professeur else "—"
-    tel_lib    = matiere.professeur.telephone if matiere.professeur else "—"
+    prof_lib    = f"{matiere.professeur.nom} {matiere.professeur.prenom}" if matiere.professeur else "—"
+    tel_lib     = matiere.professeur.telephone if matiere.professeur else "—"
 
     story.append(Paragraph(f"Liste des ajournés — {matiere.nom_matiere}", s_title))
     story.append(Spacer(1, 4))
@@ -1978,6 +2049,17 @@ def student():
     niveaux     = Niveau.query.order_by(Niveau.libelle).all()
     semestres   = get_semestres()
 
+    # ── Dictionnaire spécialités groupées par filière (pour le filtre dynamique) ──
+    specialites_par_filiere = {}
+    for s in specialites:
+        fid = str(s.id_filiere)
+        if fid not in specialites_par_filiere:
+            specialites_par_filiere[fid] = []
+        specialites_par_filiere[fid].append({
+            'id':  s.id_specialite,
+            'nom': s.nom_specialite
+        })
+
     query = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
     ).join(Etudiant).join(Filiere).join(Niveau)
@@ -2057,11 +2139,10 @@ def student():
         semestre_selected=semestre_selected, annee_active=annee_active,
         score_moyen=score_moyen, nb_critiques=nb_critiques,
         nb_moderes=nb_moderes, nb_abandons_ml=nb_abandons_ml,
+        specialites_par_filiere=specialites_par_filiere,
         ml_source=ml_engine.status().get("risk_model_trained") and "ml" or "heuristic",
         title='Etudiants'
     )
-
-
 # ==========================
 # NOTES ÉTUDIANT
 # ==========================
@@ -2075,7 +2156,8 @@ def notes_etudiant(matricule):
         Inscription.query
         .filter_by(id_etudiant=etudiant.id_etudiant)
         .options(
-            joinedload(Inscription.niveau),
+            joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
+            joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
             joinedload(Inscription.filiere),
             selectinload(Inscription.resultats).joinedload(Resultat.matiere),
             selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -2089,7 +2171,8 @@ def notes_etudiant(matricule):
             Inscription.query
             .filter_by(id_etudiant=etudiant.id_etudiant)
             .options(
-                joinedload(Inscription.niveau),
+                joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
+                joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
                 joinedload(Inscription.filiere),
                 selectinload(Inscription.resultats).joinedload(Resultat.matiere),
                 selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -2354,24 +2437,43 @@ def alerte():
             m2 = ins.moyenne_s2 if ins.moyenne_s2 is not None else 20
             moyenne = min(m1, m2)
 
+        # ── Crédits validés — FIX parité id_semestre ──────────────────────
         if semestre_selected == "1":
             credits_requis  = 30
-            credits_valides = sum(r.matiere.credit for r in ins.resultats if r.matiere and r.moyenne is not None and r.moyenne >= 10 and r.id_semestre == 1)
+            credits_valides = sum(
+                r.matiere.credit for r in ins.resultats
+                if r.matiere and r.moyenne is not None
+                and r.moyenne >= 10 and r.id_semestre % 2 == 1
+            )
         elif semestre_selected == "2":
             credits_requis  = 30
-            credits_valides = sum(r.matiere.credit for r in ins.resultats if r.matiere and r.moyenne is not None and r.moyenne >= 10 and r.id_semestre == 2)
+            credits_valides = sum(
+                r.matiere.credit for r in ins.resultats
+                if r.matiere and r.moyenne is not None
+                and r.moyenne >= 10 and r.id_semestre % 2 == 0
+            )
         else:
             credits_requis  = 60
-            credits_valides = sum(r.matiere.credit for r in ins.resultats if r.matiere and r.moyenne is not None and r.moyenne >= 10)
+            credits_valides = sum(
+                r.matiere.credit for r in ins.resultats
+                if r.matiere and r.moyenne is not None and r.moyenne >= 10
+            )
 
         credits_restants = max(0, credits_requis - credits_valides)
         taux_risque      = round((credits_restants / credits_requis * 100), 2) if credits_requis else 0
 
-        if semestre_selected in ("1", "2"):
+        # ── Matières rattrapage — FIX parité id_semestre ──────────────────
+        if semestre_selected == "1":
             matieres_rattrapage = sorted({
                 res.matiere.nom_matiere for res in ins.resultats
-                if res.matiere and res.moyenne is not None and res.moyenne < 10
-                and res.id_semestre == int(semestre_selected)
+                if res.matiere and res.moyenne is not None
+                and res.moyenne < 10 and res.id_semestre % 2 == 1
+            })
+        elif semestre_selected == "2":
+            matieres_rattrapage = sorted({
+                res.matiere.nom_matiere for res in ins.resultats
+                if res.matiere and res.moyenne is not None
+                and res.moyenne < 10 and res.id_semestre % 2 == 0
             })
         else:
             matieres_rattrapage = sorted({
@@ -2464,7 +2566,8 @@ def alerte():
         .filter(Resultat.moyenne.isnot(None))
     )
     if annee_active: risques_q = risques_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if semestre_selected in ("1", "2"): risques_q = risques_q.filter(Resultat.id_semestre == int(semestre_selected))
+    if semestre_selected in ("1", "2"):
+        risques_q = risques_q.filter(Resultat.id_semestre % 2 == int(semestre_selected) % 2)
     if niveau_selected != "all":
         try: risques_q = risques_q.filter(Inscription.id_niveau == int(niveau_selected))
         except ValueError: pass
@@ -2607,7 +2710,8 @@ def detail_risque(matricule):
         Inscription.query
         .filter_by(id_etudiant=etudiant.id_etudiant)
         .options(
-            joinedload(Inscription.niveau),
+            joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
+            joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
             selectinload(Inscription.resultats).joinedload(Resultat.matiere),
         )
         .join(AnneeScolaire, Inscription.id_annee == AnneeScolaire.id_annee)
@@ -2618,7 +2722,8 @@ def detail_risque(matricule):
             Inscription.query
             .filter_by(id_etudiant=etudiant.id_etudiant)
             .options(
-                joinedload(Inscription.niveau),
+                joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
+                joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
                 selectinload(Inscription.resultats).joinedload(Resultat.matiere),
             )
             .order_by(Inscription.id_inscription.desc()).first()
@@ -2987,6 +3092,14 @@ def parametrage():
             libelle=libelle, date_debut=parse_date(date_debut),
             date_fin=parse_date(date_fin), active=True,
         ))
+
+        # ✅ Suppression de toutes les alertes de l'année précédente
+        nb_alertes_supprimees = Alerte.query.delete()
+        logger.info(
+            "Changement d'année scolaire → %d alerte(s) supprimée(s) — nouvelle année : %s",
+            nb_alertes_supprimees, libelle
+        )
+
         db.session.commit()
 
         try:
@@ -3034,7 +3147,6 @@ def parametrage():
         creation_bloquee=creation_bloquee, today=date.today(),
         ml_status=ml_engine.status(), title='Paramétrage académique'
     )
-
 
 @app.route("/dashboard")
 @admin_required
@@ -3109,143 +3221,6 @@ def delete_user(user_id):
 
 
 # ==========================
-# SAUVEGARDE CSV / ZIP
-# ==========================
-TABLES_SAUVEGARDE = {
-    "etudiant":       ["id_etudiant", "matricule", "nom", "prenom", "annee_naissance", "genre", "id_nationalite"],
-    "inscription":    ["id_inscription", "id_etudiant", "id_filiere", "id_specialite", "id_niveau", "id_annee",
-                       "moyenne_s1", "moyenne_s2", "moyenne_annuelle", "credits_valides_s1",
-                       "credits_valides_s2", "credits_valides", "mention", "est_redoublant"],
-    "resultat":       ["id_resultat", "id_inscription", "id_matiere", "id_semestre",
-                       "moyenne", "credit_valide", "moyenne_rattrapage", "credit_valide_rattrapage"],
-    "note":           ["id_note", "id_inscription", "id_matiere", "id_session",
-                       "type_evaluation", "valeur", "date_eval"],
-    "matiere":        ["id_matiere", "nom_matiere", "code_matiere", "credit", "coefficient",
-                       "coef_cc", "coef_exam", "id_filiere", "id_professeur", "id_semestre", "id_ue"],
-    "filiere":        ["id_filiere", "nom_filiere"],
-    "specialite":     ["id_specialite", "nom_specialite", "id_filiere"],
-    "niveau":         ["id_niveau", "libelle", "credits_requis", "credits_admission", "ordre", "niveau_suivant_id"],
-    "annee_scolaire": ["id_annee", "libelle", "date_debut", "date_fin", "active"],
-    "nationalite":    ["id_nationalite", "pays", "code_iso"],
-    "professeur":     ["id_professeur", "nom", "prenom", "email", "telephone", "specialite", "id_filiere"],
-    "semestre":       ["id_semestre", "libelle", "ordre", "id_niveau"],
-}
-
-def _get_models_map():
-    return {
-        "etudiant":       Etudiant,
-        "inscription":    Inscription,
-        "resultat":       Resultat,
-        "note":           Note,
-        "matiere":        Matiere,
-        "filiere":        Filiere,
-        "specialite":     Specialite,
-        "niveau":         Niveau,
-        "annee_scolaire": AnneeScolaire,
-        "nationalite":    Nationalite,
-        "semestre":       Semestre,
-    }
-
-def _table_to_csv(model, colonnes):
-    output = StringIO()
-    writer = csv.writer(output, delimiter=",", quoting=csv.QUOTE_NONNUMERIC)
-    writer.writerow(colonnes)
-    for row in model.query.all():
-        writer.writerow([getattr(row, col, None) for col in colonnes])
-    return output.getvalue()
-
-def faire_sauvegarde_zip():
-    BACKUP_DIR = os.path.join(app.root_path, "backups")
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-
-    date_str    = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    nom_fichier = f"backup_{date_str}.zip"
-    chemin      = os.path.join(BACKUP_DIR, nom_fichier)
-
-    try:
-        models_map = _get_models_map()
-        with zipfile.ZipFile(chemin, "w", zipfile.ZIP_DEFLATED) as zf:
-            for nom_table, colonnes in TABLES_SAUVEGARDE.items():
-                model = models_map.get(nom_table)
-                if model is None:
-                    continue
-                try:
-                    contenu_csv = _table_to_csv(model, colonnes)
-                    zf.writestr(f"{nom_table}.csv", contenu_csv)
-                    logger.info("✅ Table '%s' exportée", nom_table)
-                except Exception as e:
-                    logger.warning("⚠️ Échec export table '%s' : %s", nom_table, e)
-
-        taille     = os.path.getsize(chemin)
-        taille_str = (
-            f"{taille} B"            if taille < 1024     else
-            f"{taille/1024:.1f} KB"  if taille < 1024**2 else
-            f"{taille/(1024**2):.1f} MB"
-        )
-
-        db.session.add(Sauvegarde(
-            nom_fichier     = nom_fichier,
-            type_sauvegarde = "Automatique",
-            taille_fichier  = taille_str,
-            statut          = "Succès",
-        ))
-        db.session.commit()
-        logger.info("✅ Sauvegarde ZIP réussie : %s (%s)", nom_fichier, taille_str)
-
-    except Exception as e:
-        db.session.add(Sauvegarde(
-            nom_fichier     = f"backup_echec_{date_str}.zip",
-            type_sauvegarde = "Automatique",
-            taille_fichier  = "0 B",
-            statut          = "Échec",
-        ))
-        db.session.commit()
-        logger.error("❌ Erreur sauvegarde ZIP : %s", e)
-
-
-# ==========================
-# ROUTES SAUVEGARDES
-# ==========================
-@app.route('/sauvegardes')
-@admin_required
-def sauvegardes():
-    q                = request.args.get('q', '').strip()
-    query            = Sauvegarde.query
-    if q:
-        query        = query.filter(Sauvegarde.nom_fichier.ilike(f'%{q}%'))
-    sauvegardes_list = query.order_by(Sauvegarde.date_sauvegarde.desc()).all()
-    return render_template('admin/sauvegardes.html', sauvegardes=sauvegardes_list)
-
-
-@app.route('/sauvegardes/telecharger/<int:id_sauvegarde>')
-@admin_required
-def sauvegarde_download(id_sauvegarde):
-    sauvegarde = Sauvegarde.query.get_or_404(id_sauvegarde)
-    chemin     = os.path.join(app.root_path, "backups", sauvegarde.nom_fichier)
-    if not os.path.exists(chemin):
-        flash("Fichier introuvable sur le serveur.", "danger")
-        return redirect(url_for('sauvegardes'))
-    return send_file(chemin, as_attachment=True, download_name=sauvegarde.nom_fichier)
-
-
-@app.route('/sauvegardes/supprimer/<int:id_sauvegarde>', methods=["POST"])
-@admin_required
-def sauvegarde_delete(id_sauvegarde):
-    sauvegarde = Sauvegarde.query.get_or_404(id_sauvegarde)
-    chemin     = os.path.join(app.root_path, "backups", sauvegarde.nom_fichier)
-    try:
-        if os.path.exists(chemin):
-            os.remove(chemin)
-        db.session.delete(sauvegarde)
-        db.session.commit()
-        flash("Sauvegarde supprimée.", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Erreur lors de la suppression : {e}", "danger")
-    return redirect(url_for('sauvegardes'))
-
-
-# ==========================
 # SCHEDULER
 # ==========================
 def init_scheduler(app):
@@ -3270,6 +3245,11 @@ def init_scheduler(app):
                 logger.info("Clôture automatique : %s", annee.libelle)
                 bilan = cloture_annee(annee.id_annee)
                 if bilan.get("success"):
+                    # ✅ Supprimer toutes les anciennes alertes sauf la clôture
+                    Alerte.query.filter(
+                        Alerte.type_alerte != f"cloture_auto_{annee.id_annee}"
+                    ).delete(synchronize_session=False)
+
                     upsert_alerte(
                         f"cloture_auto_{annee.id_annee}",
                         f"Clôture automatique {annee.libelle} — "
@@ -3277,6 +3257,9 @@ def init_scheduler(app):
                         f"{bilan['redoublants']} redoublants · {bilan['abandons']} abandons"
                     )
                     db.session.commit()
+                    logger.info(
+                        "Alertes supprimées à la clôture de l'année %s", annee.libelle
+                    )
                 else:
                     logger.error("Clôture auto échouée pour %s : %s",
                                  annee.libelle, bilan.get("erreur"))
@@ -3294,7 +3277,6 @@ def init_scheduler(app):
             else:
                 logger.error("ETL nocturne échoué.")
 
-    # ✅ add_job DEHORS des fonctions — indentation correcte
     scheduler.add_job(
         job_cloture_auto,
         trigger=CronTrigger(hour=0, minute=5),
@@ -3306,13 +3288,6 @@ def init_scheduler(app):
         job_etl_nightly,
         trigger=CronTrigger(hour=1, minute=0),
         id="etl_nightly",
-        replace_existing=True,
-        misfire_grace_time=3600,
-    )
-    scheduler.add_job(
-        job_sauvegarde_auto,
-        trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
-        id="sauvegarde_auto",
         replace_existing=True,
         misfire_grace_time=3600,
     )
@@ -3334,6 +3309,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def lire_fichier(file):
+    file.seek(0)
     filename = secure_filename(file.filename)
     ext = filename.rsplit('.', 1)[1].lower()
     if ext == 'xlsx':
@@ -3484,12 +3460,12 @@ def import_donnees():
 
                         existing = Inscription.query.filter_by(
                             id_etudiant = etudiant.id_etudiant,
-                            id_annee    = annee_active.id_annee
+                            id_annee    = annee_active.id_annee,
+                            id_niveau   = id_niveau,
                         ).first()
 
                         if existing:
                             existing.id_filiere     = id_filiere
-                            existing.id_niveau      = id_niveau
                             existing.id_specialite  = id_specialite
                             existing.est_redoublant = est_redoublant
                         else:
@@ -3517,6 +3493,7 @@ def import_donnees():
                     return redirect(url_for('import_donnees'))
 
                 matieres_cache = {m.nom_matiere.lower(): m for m in Matiere.query.all()}
+                inscriptions_a_recalculer = {}
 
                 for i, row in df.iterrows():
                     try:
@@ -3583,18 +3560,23 @@ def import_donnees():
                                 credit_valide  = moyenne >= 10.0,
                             ))
 
-                        db.session.flush()
-                        if hasattr(inscription, 'recalculer_moyenne_semestrielle'):
-                            if semestre.ordre % 2 == 1:
-                                inscription.moyenne_s1 = inscription.recalculer_moyenne_semestrielle(id_semestre)
-                            else:
-                                inscription.moyenne_s2 = inscription.recalculer_moyenne_semestrielle(id_semestre)
-                        if hasattr(inscription, 'recalculer_tout'):
-                            inscription.recalculer_tout()
+                        cle = (inscription.id_inscription, id_semestre)
+                        inscriptions_a_recalculer[cle] = (inscription, semestre)
 
                         succes += 1
                     except Exception as e:
                         erreurs.append(f"Ligne {i+2} : {str(e)}")
+
+                db.session.flush()
+
+                for (id_insc, id_sem), (inscription, semestre) in inscriptions_a_recalculer.items():
+                    db.session.refresh(inscription)
+                    moy = inscription.recalculer_moyenne_semestrielle(id_sem)
+                    if semestre.ordre % 2 == 1:
+                        inscription.moyenne_s1 = moy
+                    else:
+                        inscription.moyenne_s2 = moy
+                    inscription.recalculer_tout()
 
             else:
                 flash("Type d'import inconnu.", "danger")
@@ -3731,10 +3713,11 @@ def etl_run():
     annee   = get_annee_active()
     success = ETLPipeline().run(annee_id=annee.id_annee if annee else None)
     if success:
-        flash(" ETL terminé avec succès — Data Warehouse mis à jour.", "success")
+        flash("ETL terminé avec succès — Data Warehouse mis à jour.", "success")
     else:
-        flash(" ETL échoué — vérifiez les logs du serveur.", "danger")
+        flash("ETL échoué — vérifiez les logs du serveur.", "danger")
     return redirect(url_for("dashboard"))
+
 
 @app.route("/etl", methods=["GET", "POST"])
 @admin_required
@@ -3748,33 +3731,20 @@ def etl_page():
         action = request.form.get("action")
 
         if action == "tester_connexion":
-            host     = request.form.get("host", "localhost")
-            user     = request.form.get("user", "root")
-            password = request.form.get("password", "")
-            db_name  = request.form.get("db_name", "lmd1")
             try:
                 from sqlalchemy import create_engine, text
-                uri    = f"mysql+pymysql://{user}:{password}@{host}/{db_name}"
+                uri    = app.config["SQLALCHEMY_BINDS"]["oltp"]
                 engine = create_engine(uri)
                 with engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
-                message = f"✅ Connexion réussie à '{db_name}' sur '{host}'"
+                message = "✅ Connexion réussie à la base lmd1"
                 succes  = True
             except Exception as e:
                 message = f"❌ Connexion échouée : {e}"
                 succes  = False
 
         elif action == "lancer_etl":
-            host     = request.form.get("host", "localhost")
-            user     = request.form.get("user", "root")
-            password = request.form.get("password", "")
-            db_name  = request.form.get("db_name", "lmd1")
-
-            # Mise à jour temporaire de la config OLTP
-            nouvelle_uri = f"mysql+pymysql://{user}:{password}@{host}/{db_name}"
-            app.config["SQLALCHEMY_BINDS"]["oltp"] = nouvelle_uri
-
-            annee   = get_annee_active()
+            annee = get_annee_active()
             try:
                 success_etl = ETLPipeline().run(annee_id=annee.id_annee if annee else None)
                 if success_etl:
@@ -3787,25 +3757,12 @@ def etl_page():
                 message = f"❌ Erreur ETL : {e}"
                 succes  = False
 
-    # Lire la config actuelle
-    uri_actuelle = app.config.get("SQLALCHEMY_BINDS", {}).get("oltp", "")
-    # Parser l'URI pour pré-remplir le formulaire
-    try:
-        from urllib.parse import urlparse
-        parsed   = urlparse(uri_actuelle.replace("mysql+pymysql://", "mysql://"))
-        host_cur = parsed.hostname or "localhost"
-        user_cur = parsed.username or "root"
-        db_cur   = parsed.path.lstrip("/") or "lmd1"
-    except Exception:
-        host_cur = "localhost"
-        user_cur = "root"
-        db_cur   = "lmd1"
-
     annee_active = get_annee_active()
     return render_template(
         "admin/etl.html",
         message=message, succes=succes,
-        host=host_cur, user=user_cur, db_name=db_cur,
+        host="localhost", user="root", db_name="lmd1",
         annee_active=annee_active,
         title="Connexion ETL"
     )
+

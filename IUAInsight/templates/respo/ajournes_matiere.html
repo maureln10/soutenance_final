@@ -7,12 +7,11 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #eef2f7;
+  background:  #f3f6fb;
   min-height: 100vh;
   color: #1e2d3d;
 }
 
-/* ── Bouton retour ── */
 .btn-back {
   display: inline-block;
   margin-bottom: 15px;
@@ -21,7 +20,6 @@ body {
   font-weight: 500;
 }
 
-/* ── Bandeau matière ── */
 .matiere-banner {
   background: #ffffff;
   border-radius: 6px;
@@ -51,7 +49,6 @@ body {
   align-items: center;
 }
 
-/* ── Chips meta ── */
 .meta-chip {
   display: inline-flex;
   align-items: center;
@@ -62,11 +59,11 @@ body {
   border-radius: 4px;
   white-space: nowrap;
 }
-.chip-taux { background: #fee2e2; color: #b91c1c; }
-.chip-nb   { background: #eff6ff; color: #1d4ed8; }
-.chip-prof { background: #f1f5f9; color: #475569; }
+.chip-taux   { background: #fee2e2; color: #b91c1c; }
+.chip-nb     { background: #eff6ff; color: #1d4ed8; }
+.chip-nb-det { background: #f0fdf4; color: #15803d; }
+.chip-prof   { background: #f1f5f9; color: #475569; }
 
-/* ── Barre d'actions ── */
 .actions-bar {
   display: flex;
   align-items: center;
@@ -92,7 +89,6 @@ body {
   font-weight: 600;
 }
 
-/* ── Bouton PDF ── */
 .btn-pdf {
   display: inline-flex;
   align-items: center;
@@ -120,7 +116,6 @@ body {
   box-shadow: none;
 }
 
-/* ── Table responsive ── */
 .table-responsive {
   overflow-x: auto;
   scrollbar-width: none;
@@ -128,7 +123,6 @@ body {
 }
 .table-responsive::-webkit-scrollbar { display: none; }
 
-/* ── Table ── */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -157,7 +151,6 @@ body {
   vertical-align: middle;
 }
 
-/* ── Badge moyenne ── */
 .badge-moyenne {
   display: inline-flex;
   align-items: center;
@@ -169,7 +162,20 @@ body {
 .moy-faible   { background: #fee2e2; color: #b91c1c; }
 .moy-passable { background: #fff7ed; color: #c2410c; }
 
-/* ── Responsive ── */
+/* Badge mode dettes */
+.badge-dettes-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #f0fdf4;
+  color: #15803d;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .matiere-banner  { flex-direction: column; }
   .actions-bar     { flex-direction: column; align-items: flex-start; }
@@ -178,10 +184,12 @@ body {
 }
 </style>
 
+
 <div class="container-fluid" style="padding: 24px 28px;">
 
   <!-- Retour -->
-  <a href="{{ url_for('tableau_m') }}" class="btn-back">
+  <a href="{{ url_for('tableau_m', filiere=filiere_selected, niveau=niveau_selected, semestre=semestre_selected) }}"
+     class="btn-back">
     <i class="bi bi-arrow-left"></i> Retour au tableau par matière
   </a>
 
@@ -198,10 +206,19 @@ body {
         <i class="bi bi-exclamation-triangle-fill"></i>
         Taux d'échec : {{ taux_echec }}%
       </span>
-      <span class="meta-chip chip-nb">
-        <i class="bi bi-people-fill"></i>
-        {{ ajournes|length }} ajourné{{ 's' if ajournes|length > 1 else '' }}
-      </span>
+
+      {% if mode_all %}
+        <span class="meta-chip chip-nb-det">
+          <i class="bi bi-credit-card-fill"></i>
+          {{ ajournes|length }} admis endetté{{ 's' if ajournes|length > 1 else '' }}
+        </span>
+      {% else %}
+        <span class="meta-chip chip-nb">
+          <i class="bi bi-people-fill"></i>
+          {{ ajournes|length }} ajourné{{ 's' if ajournes|length > 1 else '' }}
+        </span>
+      {% endif %}
+
       {% if matiere.professeur %}
       <span class="meta-chip chip-prof">Nom du professeur:
         {{ matiere.professeur.nom }} {{ matiere.professeur.prenom }}
@@ -213,9 +230,14 @@ body {
   <!-- Barre d'actions -->
   <div class="actions-bar">
     <div class="count-label">
-      Liste des ajournés
+      {% if mode_all %}
+        Liste des admis endettés
+      {% else %}
+        Liste des ajournés
+      {% endif %}
       <span>{{ ajournes|length }} étudiant{{ 's' if ajournes|length > 1 else '' }}</span>
     </div>
+    {% if not mode_all %}
     <a href="{{ url_for('ajournes_matiere_pdf', id_matiere=matiere.id_matiere,
                         filiere=filiere_selected, niveau=niveau_selected,
                         semestre=semestre_selected) }}"
@@ -223,6 +245,7 @@ body {
       <i class="bi bi-file-earmark-pdf-fill"></i>
       Télécharger en PDF
     </a>
+    {% endif %}
   </div>
 
   <!-- Table -->
@@ -238,7 +261,16 @@ body {
             <th>Filière</th>
             <th>Spécialité</th>
             <th>Niveau</th>
-            <th>Moyenne /20</th>
+            <th>
+              {% if mode_all %}
+                Moy. matière /20
+              {% else %}
+                Moyenne /20
+              {% endif %}
+            </th>
+            {% if mode_all %}
+            <th>Statut</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -255,11 +287,22 @@ body {
               {% set cls = 'moy-faible' if a.moyenne < 5 else 'moy-passable' %}
               <span class="badge-moyenne {{ cls }}">{{ a.moyenne }}/20</span>
             </td>
+            {% if mode_all %}
+            <td>
+              <span class="badge-dettes-mode">
+                <i class="bi bi-credit-card"></i> Admis endetté
+              </span>
+            </td>
+            {% endif %}
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center text-muted" style="padding:28px;">
-              Aucun ajourné trouvé pour cette matière.
+            <td colspan="{{ 9 if mode_all else 8 }}" class="text-center text-muted" style="padding:28px;">
+              {% if mode_all %}
+                Aucun admis endetté trouvé pour cette matière.
+              {% else %}
+                Aucun ajourné trouvé pour cette matière.
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

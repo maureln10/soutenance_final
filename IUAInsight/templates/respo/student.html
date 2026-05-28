@@ -37,16 +37,15 @@ h2::after {
 
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: none;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 45, 61, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
 
 .card.text-center .card-body {
@@ -192,19 +191,17 @@ h2::after {
 .table tbody tr { transition: background 0.15s; }
 .table tbody tr:hover > * { background-color: #eff6ff !important; }
 
-/* Numéro de ligne — gris doux */
 .table tbody td:first-child {
-  font-family: 'Inter';
+  font-family: 'Inter', sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
   color: #8da0b8;
 }
 
-/* Matricule — bleu */
 .table tbody td:nth-child(2) {
-  font-family: 'Inter';
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: #3b82f6;
 }
 
@@ -275,6 +272,12 @@ h2::after {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, .1);
+}
+
+/* Indicateur visuel quand spécialité est liée à une filière */
+#specialite.filtered {
+  border-color: #3b82f6;
+  background: #eff6ff;
 }
 
 .input-group-text {
@@ -357,8 +360,10 @@ h2::after {
 
   <!-- Filtres -->
   <div class="filters">
-    <form method="GET" class="m1">
-      <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
+    <form method="GET" class="m1" id="filterForm">
+
+      <!-- Filière -->
+      <select name="filiere" id="filiereSelect" class="form-select form-select-sm" onchange="onFiliereChange()">
         <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
         {% for f in filieres %}
           <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
@@ -367,15 +372,19 @@ h2::after {
         {% endfor %}
       </select>
 
-      <select name="specialite" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="all" {% if specialite_selected == 'all' %}selected{% endif %}>Spécialités</option>
+      <!-- Spécialité — options injectées dynamiquement par JS -->
+      <select name="specialite" id="specialiteSelect" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="all">Spécialités</option>
         {% for s in specialites %}
-          <option value="{{ s.id_specialite }}" {% if specialite_selected == s.id_specialite|string %}selected{% endif %}>
+          <option value="{{ s.id_specialite }}"
+                  data-filiere="{{ s.id_filiere }}"
+                  {% if specialite_selected == s.id_specialite|string %}selected{% endif %}>
             {{ s.nom_specialite }}
           </option>
         {% endfor %}
       </select>
 
+      <!-- Niveau -->
       <select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
         {% for n in niveaux %}
@@ -385,6 +394,7 @@ h2::after {
         {% endfor %}
       </select>
 
+      <!-- Semestre -->
       <select name="semestre" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
         {% for sem in semestre %}
@@ -393,6 +403,7 @@ h2::after {
           </option>
         {% endfor %}
       </select>
+
     </form>
   </div>
 
@@ -431,7 +442,7 @@ h2::after {
           <th>Moy.Gen</th>
           <th>Statut</th>
           <th>Actions</th>
-          <th>Niveau de risque</th>
+          <th {% if semestre_selected == 'all' %}hidden{% endif %}>Niveau de risque</th>
         </tr>
       </thead>
       <tbody>
@@ -447,46 +458,45 @@ h2::after {
           <td>{{ e.moyenne_s2 }}</td>
           <td>{{ e.moyenne_annuelle }}</td>
           <td>
-           {% set s = e.statut | lower %}
-{% if 'admis' in s %}
-  <span class="badge-statut badge-admis">{{ e.statut }}</span>
-{% elif 'ajourné' in s or 'ajourne' in s %}
-  <span class="badge-statut badge-echec">{{ e.statut }}</span>
-{% elif 'redoublant' in s %}
-  <span class="badge-statut badge-redouble">{{ e.statut }}</span>
-{% elif 'abandon' in s %}
-  <span class="badge-statut" style="background:#fef3c7;color:#b45309;">{{ e.statut }}</span>
-{% elif 'en cours' in s %}
-  <span class="badge-statut badge-default">{{ e.statut }}</span>
-{% else %}
-  <span class="badge-statut badge-default">{{ e.statut }}</span>
-{% endif %}
+            {% set s = e.statut | lower %}
+            {% if 'admis' in s %}
+              <span class="badge-statut badge-admis">{{ e.statut }}</span>
+            {% elif 'ajourné' in s or 'ajourne' in s %}
+              <span class="badge-statut badge-echec">{{ e.statut }}</span>
+            {% elif 'redoublant' in s %}
+              <span class="badge-statut badge-redouble">{{ e.statut }}</span>
+            {% elif 'abandon' in s %}
+              <span class="badge-statut" style="background:#fef3c7;color:#b45309;">{{ e.statut }}</span>
+            {% elif 'en cours' in s %}
+              <span class="badge-statut badge-default">{{ e.statut }}</span>
+            {% else %}
+              <span class="badge-statut badge-default">{{ e.statut }}</span>
+            {% endif %}
           </td>
           <td>
             <a href="{{ url_for('notes_etudiant', matricule=e.matricule) }}" class="btn btn-sm btn-info">Voir</a>
           </td>
-          <td>
-  {% set niv = e.risque_niv %}
-  {% if niv == 'critique' %}
-    <span class="badge-statut badge-echec">⚠ Critique</span>
-  {% elif niv == 'modere' %}
-    <span class="badge-statut badge-redouble">● Modéré</span>
-  {% elif niv == 'surveillance' %}
-    <span class="badge-statut badge-default">◉ Surveillance</span>
-  {% else %}
-    <span class="badge-statut badge-admis">✓ OK</span>
-  {% endif %}
-  <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
-    <div style="width:70px; height:5px; background:#e2e8f4; border-radius:4px; overflow:hidden;">
-      <div style="width:{{ e.score_risque }}%; height:100%; border-radius:4px;
-                  background:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};"></div>
-    </div>
-    <span style="font-size:0.75rem; font-weight:600;
-                 color:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};">
-      {{ e.score_risque }}%
-    </span>
-  </div>
-</td>
+          <td {% if semestre_selected == 'all' %}style="display:none"{% endif %}>
+            {% set niv = e.risque_niv %}
+            {% if niv == 'critique' %}
+              <span class="badge-statut badge-echec">⚠ Critique</span>
+            {% elif niv == 'modere' %}
+              <span class="badge-statut badge-redouble">● Modéré</span>
+            {% elif niv == 'surveillance' %}
+              <span class="badge-statut badge-default">◉ Surveillance</span>
+            {% else %}
+              <span class="badge-statut badge-admis">✓ OK</span>
+            {% endif %}
+            <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
+              <div style="width:70px; height:5px; background:#e2e8f4; border-radius:4px; overflow:hidden;">
+                <div style="width:{{ e.score_risque }}%; height:100%; border-radius:4px;
+                            background:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};"></div>
+              </div>
+              <span style="font-size:0.75rem; font-weight:600;
+                           color:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};">
+                {{ e.score_risque }}%
+              </span>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -496,7 +506,64 @@ h2::after {
 
 </div>
 
+<script id="spData" type="application/json">{{ specialites_par_filiere | tojson }}</script>
+
 <script>
+  // ── Données spécialités par filière ──────────────────────────────────────
+  const specialitesParFiliere = JSON.parse(document.getElementById('spData').textContent);
+
+  const filiereSelect    = document.getElementById('filiereSelect');
+  const specialiteSelect = document.getElementById('specialiteSelect');
+
+  // Valeur actuellement sélectionnée côté serveur (pour la conserver au rechargement)
+  const specialiteActive = "{{ specialite_selected }}";
+
+  function onFiliereChange() {
+    const filiereId = filiereSelect.value;
+
+    // Vider et reconstruire le select spécialité
+    specialiteSelect.innerHTML = '<option value="all">Spécialités</option>';
+
+    if (filiereId !== 'all' && specialitesParFiliere[filiereId]) {
+      specialitesParFiliere[filiereId].forEach(function(sp) {
+        const opt = document.createElement('option');
+        opt.value = sp.id;
+        opt.textContent = sp.nom;
+        if (String(sp.id) === specialiteActive) opt.selected = true;
+        specialiteSelect.appendChild(opt);
+      });
+      specialiteSelect.classList.add('filtered');
+    } else {
+      // Aucune filière choisie : afficher toutes les spécialités
+      // On recharge via data-filiere sur les options existantes n'est pas possible ici,
+      // donc on soumet le formulaire avec filiere=all et specialite=all
+      specialiteSelect.classList.remove('filtered');
+    }
+
+    // Soumettre automatiquement le formulaire
+    document.getElementById('filterForm').submit();
+  }
+
+  // Au chargement : appliquer le filtre visuel si une filière est déjà sélectionnée
+  window.addEventListener('DOMContentLoaded', function () {
+    if (filiereSelect.value !== 'all') {
+      const filiereId = filiereSelect.value;
+      specialiteSelect.innerHTML = '<option value="all">Spécialités</option>';
+
+      if (specialitesParFiliere[filiereId]) {
+        specialitesParFiliere[filiereId].forEach(function(sp) {
+          const opt = document.createElement('option');
+          opt.value = sp.id;
+          opt.textContent = sp.nom;
+          if (String(sp.id) === specialiteActive) opt.selected = true;
+          specialiteSelect.appendChild(opt);
+        });
+        specialiteSelect.classList.add('filtered');
+      }
+    }
+  });
+
+  // ── Recherche live ───────────────────────────────────────────────────────
   document.getElementById("searchInput").addEventListener("keyup", function() {
     let filter = this.value.toLowerCase();
     let rows = document.querySelectorAll("#studentTable tbody tr");

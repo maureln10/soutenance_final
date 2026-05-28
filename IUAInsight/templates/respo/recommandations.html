@@ -7,7 +7,7 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      background: #eef2f7;
+      background:  #eef2f7;
       min-height: 100vh;
       color: #1e2d3d;
     }
@@ -97,20 +97,19 @@
     }
 
     .kpi-col { flex: 1 1 160px; max-width: 220px; }
-
-    .card {
-      background: #ffffff;
-      border: none;
-      border-radius: 16px;
-      box-shadow: 0 2px 12px rgba(30, 45, 61, 0.08);
-      overflow: hidden;
-      transition: transform 0.18s, box-shadow 0.18s;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(30, 45, 61, 0.12);
-    }
+.card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  /* ✦ CORRIGÉ : double couche de shadow bien visible */
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
+}
 
     .card.text-center .card-body {
       padding: 12px 8px;
@@ -189,6 +188,7 @@
       letter-spacing: 0.06em;
       color: #8da0b8;
       margin-bottom: 12px;
+      
     }
 
     .reco-list {
@@ -206,6 +206,7 @@
       padding: 14px 18px;
       box-shadow: 0 2px 8px rgba(30, 45, 61, 0.05);
       transition: transform 0.15s, box-shadow 0.15s;
+        box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
     }
     .reco-card:hover {
       transform: translateY(-1px);
@@ -264,7 +265,9 @@
       flex-direction: column;
       gap: 8px;
       margin-bottom: 32px;
+   
     }
+
 
     .alerte-item {
       display: flex;

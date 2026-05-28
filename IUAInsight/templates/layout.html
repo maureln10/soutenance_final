@@ -58,6 +58,41 @@
       padding: 0; line-height: 1; flex-shrink: 0;
     }
     .flash-toast-close:hover { opacity: 1; }
+  
+.notif-wrapper { position: relative; }
+.notif-dropdown {
+  display: none; position: absolute; top: 48px; right: 0;
+  width: 340px; background: #fff; border: 1px solid #e5e7eb;
+  border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  z-index: 9999; overflow: hidden;
+}
+.notif-dropdown.open { display: block; animation: notifFadeIn 0.15s ease; }
+@keyframes notifFadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.notif-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px 10px; border-bottom: 1px solid #f1f5f9;
+  font-size: 0.82rem; font-weight: 600; color: #1e293b;
+}
+.notif-count { color: #94a3b8; font-weight: 400; }
+.notif-voir-tout { font-size: 0.75rem; color: #3b82f6; text-decoration: none; }
+.notif-voir-tout:hover { text-decoration: underline; }
+.notif-list { max-height: 380px; overflow-y: auto; }
+.notif-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid #f8fafc;
+  cursor: pointer; transition: background 0.1s;
+}
+.notif-item:hover { background: #f8fafc; }
+.notif-item.unread { background: #eff6ff; }
+.notif-item.unread:hover { background: #dbeafe; }
+.notif-icon { font-size: 1rem; padding-top: 2px; flex-shrink: 0; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-msg { font-size: 0.78rem; color: #334155; margin: 0 0 3px; line-height: 1.4; }
+.notif-time { font-size: 0.72rem; color: #94a3b8; margin: 0; }
+.notif-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; margin-top: 5px; }
+.notif-empty { text-align: center; padding: 30px 16px; color: #94a3b8; font-size: 0.82rem; }
+.notif-empty i { font-size: 1.6rem; display: block; margin-bottom: 8px; }
+
   </style>
 </head>
 
@@ -97,23 +132,20 @@
         </a>
         <a href="{{ url_for('gestion') }}" class="menu-item">
           <i class="bi bi-people-fill"></i>
-          <span>Gestion des comptes</span>
+          <span>Gestion des Utilisateurs</span>
         </a>
        <a href="{{ url_for('etl_page') }}" class="menu-item">
-  <i class="bi bi-database-gear me-2"></i>ETL / Connexion
+  <i class="bi bi-database-gear me-2"></i>Connexion BD / ETL
 </a>
         <a href="{{ url_for('parametrage') }}" class="menu-item">
           <i class="bi bi-gear"></i>
           <span>Paramétrage académique</span>
         </a>
-         <span class="section-title">Historique & import </span>
-        <a href="{{ url_for('sauvegardes') }}" class="menu-item">
-         <i class="bi bi-clock-history"></i> 
-          <span>Historique des sauvegardes</span>
-        </a>
-            <a href="{{ url_for('import_donnees') }}" class="menu-item">
-         <i class="bi bi-clock-history"></i> 
-          <span>import</span>
+         <span class="section-title">import </span>
+      
+      <a href="{{ url_for('import_donnees') }}" class="menu-item">
+         <i class="bi bi-upload"></i></i> 
+          <span>import de données</span>
         </a>
        
         <span class="section-title">Profil</span>
@@ -209,14 +241,52 @@
 
           <!-- Notifications : respo uniquement -->
           {% if current_user.__class__.__name__ != 'Administrateur_sy' %}
-          <a href="{{ url_for('alerte') }}" class="notif-btn" aria-label="Notifications">
-            <i class="bi bi-bell"></i>
-            {% if nb_alertes and nb_alertes > 0 %}
-              <span class="notif-badge">{{ nb_alertes if nb_alertes < 100 else '99+' }}</span>
-            {% endif %}
-          </a>
-          {% endif %}
+<div class="notif-wrapper" id="notifWrapper">
+  <button class="notif-btn" id="notifBtn" aria-label="Notifications" aria-expanded="false">
+    <i class="bi bi-bell"></i>
+    {% if nb_alertes and nb_alertes > 0 %}
+      <span class="notif-badge" id="notifBadge">{{ nb_alertes if nb_alertes < 100 else '99+' }}</span>
+    {% endif %}
+  </button>
 
+  <div class="notif-dropdown" id="notifDropdown">
+    <div class="notif-header">
+      <span>Notifications <span class="notif-count">({{ nb_alertes }})</span></span>
+      <a href="{{ url_for('alerte') }}" class="notif-voir-tout">Voir tout</a>
+    </div>
+    <div class="notif-list">
+      {% set alertes_recentes = alertes_dropdown if alertes_dropdown is defined else [] %}
+      {% if alertes_recentes %}
+        {% for alerte in alertes_recentes %}
+        <div class="notif-item {% if not alerte.vue %}unread{% endif %}">
+          <div class="notif-icon">
+            {% if 'critique' in alerte.type_alerte %}
+              <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444"></i>
+            {% elif 'abandon' in alerte.type_alerte %}
+              <i class="bi bi-person-x-fill" style="color:#f59e0b"></i>
+            {% elif 'echec' in alerte.type_alerte %}
+              <i class="bi bi-x-circle-fill" style="color:#ef4444"></i>
+            {% else %}
+              <i class="bi bi-info-circle-fill" style="color:#3b82f6"></i>
+            {% endif %}
+          </div>
+          <div class="notif-body">
+            <p class="notif-msg">{{ alerte.message }}</p>
+            <p class="notif-time">{{ alerte.date.strftime('%d/%m/%Y') if alerte.date else '' }}</p>
+          </div>
+          {% if not alerte.vue %}<div class="notif-dot"></div>{% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="notif-empty">
+          <i class="bi bi-bell-slash"></i>
+          <p>Aucune notification</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
           <!-- Utilisateur -->
           <div class="d-flex align-items-center gap-2">
             <img class="rounded-circle account-img"
@@ -246,6 +316,26 @@
 
   </main>
 </div>
+<script>
+(function() {
+  const btn      = document.getElementById('notifBtn');
+  const dropdown = document.getElementById('notifDropdown');
+  if (!btn || !dropdown) return;
+
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen);
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#notifWrapper')) {
+      dropdown.classList.remove('open');
+      btn.setAttribute('aria-expanded', false);
+    }
+  });
+})();
+</script>
 
 <!-- ── Active menu highlight ── -->
 <script>

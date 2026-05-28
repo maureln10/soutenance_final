@@ -3,7 +3,9 @@ ETL - Extracteur
 Lit les données brutes depuis la BD OLTP (lmd1)
 """
 
-from IUAInsight import db
+from IUAInsight import db, app
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, joinedload, selectinload
 from IUAInsight.models import (
     Inscription, Etudiant, Filiere, Specialite,
     Niveau, AnneeScolaire, Matiere, Resultat,
@@ -12,29 +14,44 @@ from IUAInsight.models import (
 
 
 class Extractor:
-    """Extrait toutes les données nécessaires depuis l'OLTP."""
+    """Extrait toutes les données depuis l'OLTP via sa propre session."""
+
+    def _get_oltp_session(self):
+        """Crée une session indépendante sur la BD OLTP."""
+        uri = app.config["SQLALCHEMY_BINDS"]["oltp"]
+        engine = create_engine(uri)
+        Session = sessionmaker(bind=engine)
+        return Session()
 
     def extract_inscriptions(self, annee_id=None):
-        """
-        Retourne toutes les inscriptions avec leurs relations.
-        Si annee_id est fourni, filtre sur cette année scolaire.
-        """
         query = Inscription.query \
             .join(Etudiant,      Inscription.id_etudiant == Etudiant.id_etudiant) \
             .join(Niveau,        Inscription.id_niveau   == Niveau.id_niveau) \
             .join(AnneeScolaire, Inscription.id_annee    == AnneeScolaire.id_annee) \
             .outerjoin(Filiere,    Inscription.id_filiere   == Filiere.id_filiere) \
-            .outerjoin(Specialite, Inscription.id_specialite == Specialite.id_specialite)
+            .outerjoin(Specialite, Inscription.id_specialite == Specialite.id_specialite) \
+            .options(
+                selectinload(Inscription.resultats).joinedload(Resultat.matiere),
+                selectinload(Inscription.resultats).joinedload(Resultat.semestre),
+                joinedload(Inscription.niveau).joinedload(Niveau.semestres),
+            )
 
         if annee_id:
             query = query.filter(Inscription.id_annee == annee_id)
 
         inscriptions = query.all()
-        print(f"[Extractor] {len(inscriptions)} inscriptions extraites.")
+
+        # Recalcul à la volée
+        for insc in inscriptions:
+            insc.recalculer_tout()
+
+        # Persiste en base OLTP
+        db.session.commit()
+
+        print(f"[Extractor] {len(inscriptions)} inscriptions extraites et recalculées.")
         return inscriptions
 
     def extract_etudiants(self):
-        """Retourne tous les étudiants avec leur nationalité."""
         etudiants = Etudiant.query \
             .outerjoin(Nationalite, Etudiant.id_nationalite == Nationalite.id_nationalite) \
             .all()
@@ -42,31 +59,26 @@ class Extractor:
         return etudiants
 
     def extract_filieres(self):
-        """Retourne toutes les filières."""
         filieres = Filiere.query.all()
         print(f"[Extractor] {len(filieres)} filières extraites.")
         return filieres
 
     def extract_specialites(self):
-        """Retourne toutes les spécialités."""
         specialites = Specialite.query.all()
         print(f"[Extractor] {len(specialites)} spécialités extraites.")
         return specialites
 
     def extract_niveaux(self):
-        """Retourne tous les niveaux."""
         niveaux = Niveau.query.all()
         print(f"[Extractor] {len(niveaux)} niveaux extraits.")
         return niveaux
 
     def extract_annees(self):
-        """Retourne toutes les années scolaires."""
         annees = AnneeScolaire.query.all()
         print(f"[Extractor] {len(annees)} années scolaires extraites.")
         return annees
 
     def extract_matieres(self):
-        """Retourne toutes les matières avec UE et semestre."""
         matieres = Matiere.query \
             .outerjoin(UE,       Matiere.id_ue      == UE.id_ue) \
             .outerjoin(Semestre, Matiere.id_semestre == Semestre.id_semestre) \
@@ -75,23 +87,14 @@ class Extractor:
         return matieres
 
     def extract_absences(self, annee_id=None):
-        """
-        Retourne toutes les absences.
-        Filtre optionnel par année (via inscription).
-        """
         query = Absence.query \
             .join(Etudiant, Absence.id_etudiant == Etudiant.id_etudiant) \
             .join(Matiere,  Absence.id_matiere  == Matiere.id_matiere)
-
         absences = query.all()
         print(f"[Extractor] {len(absences)} absences extraites.")
         return absences
 
     def extract_all(self, annee_id=None):
-        """
-        Point d'entrée principal : extrait tout en une fois.
-        Retourne un dictionnaire avec toutes les données.
-        """
         print(f"\n{'='*50}")
         print(f"[Extractor] Début de l'extraction (annee_id={annee_id})")
         print(f"{'='*50}")

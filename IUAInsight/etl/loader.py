@@ -9,7 +9,7 @@ from IUAInsight import db
 from IUAInsight.Warehouse.models import (
     DimEtudiant, DimFiliere, DimNiveau, DimAnnee,
     DimMatiere, DimTemps,
-    FaitResultatEtudiant, FaitAbsence
+    FaitResultatEtudiant
 )
 
 
@@ -26,13 +26,12 @@ class Loader:
         for r in records:
             existing = DimEtudiant.query.filter_by(id_etudiant=r['id_etudiant']).first()
             if existing:
-                # Mise à jour
-                existing.matricule      = r['matricule']
-                existing.nom            = r['nom']
-                existing.prenom         = r['prenom']
-                existing.genre          = r['genre']
-                existing.annee_naissance= r['annee_naissance']
-                existing.nationalite    = r['nationalite']
+                existing.matricule       = r['matricule']
+                existing.nom             = r['nom']
+                existing.prenom          = r['prenom']
+                existing.genre           = r['genre']
+                existing.annee_naissance = r['annee_naissance']
+                existing.nationalite     = r['nationalite']
                 count_upd += 1
             else:
                 db.session.add(DimEtudiant(**{k: v for k, v in r.items()}))
@@ -132,11 +131,9 @@ class Loader:
     # ══════════════════════════════════════════
 
     def _build_lookup_etudiants(self):
-        """Construit un dict {id_etudiant_oltp: id_dim} pour les FK."""
         return {e.id_etudiant: e.id for e in DimEtudiant.query.all()}
 
     def _build_lookup_filieres(self):
-        """Construit un dict {id_filiere_oltp: id_dim} (première spécialité trouvée)."""
         lookup = {}
         for f in DimFiliere.query.all():
             if f.id_filiere not in lookup:
@@ -164,16 +161,14 @@ class Loader:
         Charge FaitResultatEtudiant — UPSERT sur id_inscription.
         Résout les FK vers les dimensions avant insertion.
         """
-        # Lookups
-        lk_etu  = self._build_lookup_etudiants()
-        lk_fil  = self._build_lookup_filieres()
-        lk_niv  = self._build_lookup_niveaux()
-        lk_ann  = self._build_lookup_annees()
+        lk_etu = self._build_lookup_etudiants()
+        lk_fil = self._build_lookup_filieres()
+        lk_niv = self._build_lookup_niveaux()
+        lk_ann = self._build_lookup_annees()
 
         count_new, count_upd, count_skip = 0, 0, 0
 
         for r in records:
-            # Résoudre les IDs de dimensions
             id_dim_etu = lk_etu.get(r['_id_etudiant'])
             id_dim_fil = lk_fil.get(r['_id_filiere'])
             id_dim_niv = lk_niv.get(r['_id_niveau'])
@@ -181,51 +176,54 @@ class Loader:
 
             if not id_dim_etu or not id_dim_niv or not id_dim_ann:
                 count_skip += 1
-                continue  # Dimension manquante, on ignore
+                continue
 
             existing = FaitResultatEtudiant.query.filter_by(
                 id_inscription=r['id_inscription']
             ).first()
 
             if existing:
-                # Mise à jour des mesures
-                existing.moyenne_s1           = r['moyenne_s1']
-                existing.moyenne_s2           = r['moyenne_s2']
-                existing.moyenne_annuelle     = r['moyenne_annuelle']
-                existing.credits_valides_s1   = r['credits_valides_s1']
-                existing.credits_valides_s2   = r['credits_valides_s2']
-                existing.credits_valides      = r['credits_valides']
-                existing.credits_requis       = r['credits_requis']
-                existing.taux_reussite_credits= r['taux_reussite_credits']
-                existing.mention              = r['mention']
-                existing.statut               = r['statut']
-                existing.est_redoublant       = r['est_redoublant']
-                existing.est_admis            = r['est_admis']
-                existing.est_ajourne          = r['est_ajourne']
-                existing.maj_at               = datetime.utcnow()
+                existing.moyenne_s1            = r['moyenne_s1']
+                existing.moyenne_s2            = r['moyenne_s2']
+                existing.moyenne_annuelle      = r['moyenne_annuelle']
+                existing.credits_valides_s1    = r['credits_valides_s1']
+                existing.credits_valides_s2    = r['credits_valides_s2']
+                existing.credits_valides       = r['credits_valides']
+                existing.credits_requis        = r['credits_requis']
+                existing.taux_reussite_credits = r['taux_reussite_credits']
+                existing.mention               = r['mention']
+                existing.statut                = r['statut']
+                existing.est_redoublant        = r['est_redoublant']
+                existing.est_admis             = r['est_admis']
+                existing.est_ajourne           = r['est_ajourne']
+                existing.est_en_dette          = r['est_en_dette']   # corrigé
+                existing.credits_dus           = r['credits_dus']    # corrigé
+                existing.maj_at                = datetime.utcnow()
                 count_upd += 1
             else:
                 db.session.add(FaitResultatEtudiant(
-                    id_inscription        = r['id_inscription'],
-                    id_dim_etudiant       = id_dim_etu,
-                    id_dim_filiere        = id_dim_fil,
-                    id_dim_niveau         = id_dim_niv,
-                    id_dim_annee          = id_dim_ann,
-                    moyenne_s1            = r['moyenne_s1'],
-                    moyenne_s2            = r['moyenne_s2'],
-                    moyenne_annuelle      = r['moyenne_annuelle'],
-                    credits_valides_s1    = r['credits_valides_s1'],
-                    credits_valides_s2    = r['credits_valides_s2'],
-                    credits_valides       = r['credits_valides'],
-                    credits_requis        = r['credits_requis'],
-                    taux_reussite_credits = r['taux_reussite_credits'],
-                    mention               = r['mention'],
-                    statut                = r['statut'],
-                    est_redoublant        = r['est_redoublant'],
-                    est_admis             = r['est_admis'],
-                    est_ajourne           = r['est_ajourne'],
-                    charge_at             = r['charge_at'],
-                    maj_at                = r['maj_at'],
+                    id_inscription         = r['id_inscription'],
+                    id_dim_etudiant        = id_dim_etu,
+                    id_dim_filiere         = id_dim_fil,
+                    id_dim_niveau          = id_dim_niv,
+                    id_dim_annee           = id_dim_ann,
+                    moyenne_s1             = r['moyenne_s1'],
+                    moyenne_s2             = r['moyenne_s2'],
+                    moyenne_annuelle       = r['moyenne_annuelle'],
+                    credits_valides_s1     = r['credits_valides_s1'],
+                    credits_valides_s2     = r['credits_valides_s2'],
+                    credits_valides        = r['credits_valides'],
+                    credits_requis         = r['credits_requis'],
+                    taux_reussite_credits  = r['taux_reussite_credits'],
+                    mention                = r['mention'],
+                    statut                 = r['statut'],
+                    est_redoublant         = r['est_redoublant'],
+                    est_admis              = r['est_admis'],
+                    est_ajourne            = r['est_ajourne'],
+                    est_en_dette           = r['est_en_dette'],      # corrigé
+                    credits_dus            = r['credits_dus'],       # corrigé
+                    charge_at              = r['charge_at'],
+                    maj_at                 = r['maj_at'],
                 ))
                 count_new += 1
 
@@ -233,45 +231,7 @@ class Loader:
         print(f"[Loader] FaitResultatEtudiant → {count_new} insérés, {count_upd} mis à jour, {count_skip} ignorés")
         return count_new, count_upd
 
-    def load_faits_absences(self, records):
-        """Charge FaitAbsence — UPSERT sur id_absence."""
-        lk_etu  = self._build_lookup_etudiants()
-        lk_mat  = self._build_lookup_matieres()
-        lk_tmp  = self._build_lookup_temps()
-
-        count_new, count_upd, count_skip = 0, 0, 0
-
-        for r in records:
-            id_dim_etu = lk_etu.get(r['_id_etudiant'])
-            id_dim_mat = lk_mat.get(r['_id_matiere'])
-            id_dim_tmp = lk_tmp.get(r['_date'])
-
-            if not id_dim_etu or not id_dim_mat:
-                count_skip += 1
-                continue
-
-            existing = FaitAbsence.query.filter_by(id_absence=r['id_absence']).first()
-            if existing:
-                existing.nb_absences       = r['nb_absences']
-                existing.nb_justifiees     = r['nb_justifiees']
-                existing.nb_non_justifiees = r['nb_non_justifiees']
-                count_upd += 1
-            else:
-                db.session.add(FaitAbsence(
-                    id_absence          = r['id_absence'],
-                    id_dim_etudiant     = id_dim_etu,
-                    id_dim_matiere      = id_dim_mat,
-                    id_dim_temps        = id_dim_tmp,
-                    nb_absences         = r['nb_absences'],
-                    nb_justifiees       = r['nb_justifiees'],
-                    nb_non_justifiees   = r['nb_non_justifiees'],
-                    charge_at           = r['charge_at'],
-                ))
-                count_new += 1
-
-        db.session.commit()
-        print(f"[Loader] FaitAbsence → {count_new} insérés, {count_upd} mis à jour, {count_skip} ignorés")
-        return count_new, count_upd
+ 
 
     # ══════════════════════════════════════════
     #  POINT D'ENTRÉE PRINCIPAL
@@ -296,6 +256,6 @@ class Loader:
 
         # 2. Faits (après toutes les dimensions)
         self.load_faits_resultats(transformed['faits_resultats'])
-        self.load_faits_absences( transformed['faits_absences'])
 
-        print(f"[Loader] ✅ Chargement terminé dans iuainsight_dw")
+
+        print(f"[Loader] ✅ Chargement terminé dans iuadecis_dw")

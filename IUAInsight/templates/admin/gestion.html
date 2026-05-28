@@ -20,6 +20,7 @@ h2::after {
 
 .card-body {
   padding: 16px 20px;
+  
 }
 
 .card-body form .mb-2 {
@@ -92,15 +93,22 @@ h2::after {
   .card.text-center h4 { font-size: 1.2rem; }
   .kpi-row .col-md-2 { flex: 0 0 50%; max-width: 50%; }
 }
+.text-muted{
+  font-size:0.82rem;
+  color:#8da0b8 !important;
+}
 </style>
 
 
 <div class="container-fluid">
-  <h2>Gestion des Comptes</h2><br>
+  <h2>Gestion des Comptes</h2>
+  <p class="text-muted">Vous pouvez créer ou supprimer un utilisateur</p>
 <br>
   <!-- Formulaire Flask-WTF -->
-  <div class="card mb-4" style="max-width: 520px;">
-    <div class="card-header"><h4 style="font-size: 0.99rem;">Créer un compte</h4></div>
+  <div class="card mb-4" style="max-width: 520px;  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;">
+    <div class="card-header"><h4 style="font-size: 0.99rem;">Créer un utilisateur</h4>
+      
+    </div>
     <div class="card-body">
       <form method="POST">
         {{ form.hidden_tag() }}

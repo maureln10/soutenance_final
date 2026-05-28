@@ -33,9 +33,7 @@ class Transformer:
 
     def transform_filieres(self, filieres, specialites):
         """Transforme filières + spécialités → DimFiliere."""
-        # On crée une entrée par (filière, spécialité)
         result = []
-        # D'abord les filières sans spécialité
         for f in filieres:
             specs_filiere = [s for s in specialites if s.id_filiere == f.id_filiere]
             if specs_filiere:
@@ -95,7 +93,7 @@ class Transformer:
                 'code_matiere': m.code_matiere,
                 'credit':       m.credit,
                 'coefficient':  m.coefficient,
-                'nom_ue':       m.ue.nom       if m.ue       else None,
+                'nom_ue':       m.ue.nom          if m.ue       else None,
                 'nom_semestre': m.semestre.libelle if m.semestre else None,
                 'charge_at':    datetime.utcnow(),
             })
@@ -136,39 +134,48 @@ class Transformer:
         """
         result = []
         for insc in inscriptions:
-            statut         = insc.statut_simple
-            credits_requis = insc._credits_requis()
-            credits_valides= insc.credits_valides
+            # Sécurisation : statut ne sera jamais None
+            statut          = insc.statut_simple or ''
+            credits_requis  = insc._credits_requis()
+            credits_valides = insc.credits_valides or 0
 
             # Taux de réussite en crédits (0-100)
             taux_credits = round(
                 (credits_valides / credits_requis * 100), 2
             ) if credits_requis > 0 else 0.0
 
+            # Drapeaux statut — calculés une seule fois proprement
+            est_admis    = statut in ('Admis', 'Admis (dettes)')
+            est_ajourne  = 'Ajourné' in statut
+            est_en_dette = statut == 'Admis (dettes)'
+            credits_dus  = max(0, credits_requis - credits_valides) if est_en_dette else 0
+
             result.append({
-                'id_inscription':      insc.id_inscription,
+                'id_inscription':        insc.id_inscription,
                 # Clés naturelles (pour retrouver les dim IDs après insertion)
-                '_id_etudiant':        insc.id_etudiant,
-                '_id_filiere':         insc.id_filiere,
-                '_id_niveau':          insc.id_niveau,
-                '_id_annee':           insc.id_annee,
+                '_id_etudiant':          insc.id_etudiant,
+                '_id_filiere':           insc.id_filiere,
+                '_id_niveau':            insc.id_niveau,
+                '_id_annee':             insc.id_annee,
                 # Mesures
-                'moyenne_s1':          insc.moyenne_s1,
-                'moyenne_s2':          insc.moyenne_s2,
-                'moyenne_annuelle':    insc.moyenne_annuelle,
-                'credits_valides_s1':  insc.credits_valides_s1,
-                'credits_valides_s2':  insc.credits_valides_s2,
-                'credits_valides':     credits_valides,
-                'credits_requis':      credits_requis,
+                'moyenne_s1':            insc.moyenne_s1,
+                'moyenne_s2':            insc.moyenne_s2,
+                'moyenne_annuelle':      insc.moyenne_annuelle,
+                'credits_valides_s1':    insc.credits_valides_s1,
+                'credits_valides_s2':    insc.credits_valides_s2,
+                'credits_valides':       credits_valides,
+                'credits_requis':        credits_requis,
                 'taux_reussite_credits': taux_credits,
                 # Attributs dégénérés
-                'mention':        insc.mention,
-                'statut':         statut,
-                'est_redoublant': insc.est_redoublant,
-                'est_admis':      statut in ('Admis', 'Admis (dettes)'),
-                'est_ajourne':    'Ajourné' in statut,
-                'charge_at':      datetime.utcnow(),
-                'maj_at':         datetime.utcnow(),
+                'mention':               insc.mention,
+                'statut':                statut,
+                'est_redoublant':        insc.est_redoublant,
+                'est_admis':             est_admis,
+                'est_ajourne':           est_ajourne,
+                'est_en_dette':          est_en_dette,  # corrigé : manquait
+                'credits_dus':           credits_dus,   # corrigé : manquait
+                'charge_at':             datetime.utcnow(),
+                'maj_at':                datetime.utcnow(),
             })
 
         print(f"[Transformer] {len(result)} faits résultats transformés → FaitResultatEtudiant")

@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --bg:           #f5f7fa;
+  --bg:           #eef2f7;
   --surface:      #ffffff;
   --border:       #e4e9f2;
   --border-hover: rgba(37,99,235,.25);
@@ -51,17 +51,20 @@ h2::after {
 
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  /* ✦ CORRIGÉ : double couche de shadow bien visible */
+  box-shadow: 0 2px 8px rgba(9,18,32,0.10), 0 8px 25px rgba(9,18,32,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
+ .card.text-center{
+    box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
+ }
 /*
 .kpi-row .kpi-col:nth-child(1) .card { border-top: 4px solid #3b82f6 !important; }
 .kpi-row .kpi-col:nth-child(2) .card { border-top: 4px solid #22c55e !important; }
@@ -84,6 +87,7 @@ h2::after {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  
 }
 .card.text-center h4 {
   font-size: 1.4rem;
@@ -126,8 +130,12 @@ h2::after {
   font-weight: 700;
   color: #1e2d3d;
   padding: 16px 22px !important;
+  
 }
 
+.row{
+  
+}
 .card-body { padding: 20px !important; }
 
 canvas { max-width: 100%; height: auto !important; display: block; }
@@ -188,6 +196,7 @@ canvas { max-width: 100%; height: auto !important; display: block; }
   min-width: 0;
 }
 </style>
+
 <br>
 
 <div class="container-fluid">
@@ -232,7 +241,7 @@ canvas { max-width: 100%; height: auto !important; display: block; }
   <!-- KPI -->
 <div class="kpi-row">
 <div class="kpi-col">
-  <div class="card text-center shadow-sm">
+  <div class="card text-center">
     <div class="card-body">
       <i class="bi bi-person-plus"></i>
       <h4>{{ total }}</h4>

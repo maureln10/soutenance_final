@@ -5,9 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  
-  --accent:           #4f7cff;
- 
+  --accent: #4f7cff;
 }
 
 * {
@@ -41,23 +39,23 @@ body {
   padding: 40px 36px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Title ── */
 .login-card h2 {
-  font-size: 25px;
+  font-size: 28px;
   font-weight: 600;
   color: #ffffff;
-  text-align: center !important;
-  margin-bottom: 6px !important;
+  text-align: center;
+  margin-bottom: 6px;
 }
 
 .login-card > p {
-  font-size: 0.82rem;
+  font-size: 0.97rem;
   color: #7a99bb;
-  text-align: center !important;
-  margin-bottom: 28px !important;
+  text-align: center;
+  margin-bottom: 28px;
 }
 
 /* ── Input icon ── */
@@ -67,69 +65,84 @@ body {
   top: 50%;
   transform: translateY(-50%);
   color: #4a7aab;
-  font-size: 0.85rem;
+  font-size: 1rem;
   pointer-events: none;
 }
 
-.mb-3, .mb-4 {
+.mb-3,
+.mb-4 {
   position: relative;
 }
 
 /* ── Inputs ── */
-.form-control {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 0.87rem !important;
+.form-control,
+input.form-control,
+input.form-control-lg {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
   background: #0d1b2e !important;
-  border: 1px solid #1e3a5f !important;
-  border-radius: 8px !important;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
   color: #d0e4f7 !important;
-  padding: 12px 14px 12px 40px !important;
-  transition: border-color 0.2s !important;
+  padding: 13px 44px 13px 42px;
+  transition: border-color 0.2s;
+  width: 100%;
 }
 
 .form-control::placeholder {
-  color: #4a6a8a;
+  color: #4a6a8a !important;
 }
 
-.form-control:focus {
-  outline: none !important;
-  border-color: #2e6db4 !important;
-  box-shadow: 0 0 0 3px rgba(46, 109, 180, 0.2) !important;
+.form-control:focus,
+input.form-control:focus,
+input.form-control-lg:focus {
+  outline: none;
+  border-color: #2e6db4;
+  box-shadow: 0 0 0 3px rgba(46, 109, 180, 0.2);
   background: #0d1b2e !important;
+  color: #d0e4f7 !important;
+}
+
+/* ── Autofill fix ── */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px #0d1b2e inset !important;
+  -webkit-text-fill-color: #d0e4f7 !important;
 }
 
 /* ── Errors ── */
 .text-danger {
-  font-size: 0.75rem !important;
-  color: #ff6b6b !important;
+  font-size: 0.87rem;
+  color: #ff6b6b;
   margin-top: 4px;
   display: block;
 }
 
 /* ── Button ── */
 .btn-primary {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 0.9rem !important;
-  font-weight: 500 !important;
-  background: #1a5fb4 !important;
-  border: none !important;
-  border-radius: 8px !important;
-  color: #fff !important;
-  padding: 12px !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #1a5fb4;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 13px;
   width: 100%;
   cursor: pointer;
-  transition: background 0.2s !important;
+  transition: background 0.2s;
 }
 
 .btn-primary:hover {
-  background: #1a4f9a !important;
+  background: #1a4f9a;
 }
 
 /* ── Alerts ── */
 .alert {
-  font-size: 0.8rem;
+  font-size: 0.93rem;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 11px 16px;
   margin-bottom: 18px;
   border: none;
 }
@@ -140,29 +153,28 @@ body {
 
 .btn-close { filter: invert(1) opacity(0.5); }
 
-/* ── Autofill fix ── */
-.form-control:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px #0d1b2e inset !important;
-  -webkit-text-fill-color: #d0e4f7 !important;
-}
+/* ── Lien bas de page ── */
 .maurel {
-    display: block;       /* occupe toute la largeur */
-    text-align: center;   /* centre le texte */
-    margin-top: 10px;     /* espace au-dessus */
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.93rem;
 }
-.maurel:hover{
+
+.maurel:hover {
   color: white;
 }
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .login-card { padding: 28px 20px; }
 }
 
-/* Logo */
+/* ── Logo ── */
 .logo {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 17px;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.01em;
   padding: 26px 22px 22px;
@@ -175,9 +187,39 @@ body {
 
 .logo i {
   color: var(--accent);
-  font-size: 1.2rem;
+  font-size: 1.35rem;
 }
-p{
+
+p {
+  display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ── Toggle mot de passe ── */
+.toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #4a7aab;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+  z-index: 10;
+}
+
+.toggle-password:hover {
+  color: #7eb8ff;
+}
+/* ── Autofill fix ── */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px #0d1b2e inset !important;
+  -webkit-text-fill-color: #ffffff !important;   /* ← blanc forcé */
+  caret-color: #ffffff;
 }

@@ -3,27 +3,58 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_wtf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
+from dotenv import load_dotenv
+import os
+
+# ── Chargement des variables d'environnement ───────────────
+load_dotenv()
 
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = 'f8b3cf545102730455c6d4a267c73d2f52f2ff80da9f9bc9b280691d03710c2d'
+app.config['SECRET_KEY']                  = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # ── Base applicative Flask (admin, respo, rapports, alertes, sauvegardes)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:@localhost/iua_app_db"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_APP_URI')
 
 # ── Binds : OLTP source (lmd1) + Data Warehouse
 app.config['SQLALCHEMY_BINDS'] = {
-    "oltp": "mysql+pymysql://root:@localhost/lmd1",
-    "dw":   "mysql+pymysql://root:@localhost/iuadecis_dw",
+    "oltp": os.getenv('DB_OLTP_URI'),
+    "dw":   os.getenv('DB_DW_URI'),
 }
 
-db       = SQLAlchemy(app)
-bcrypt   = Bcrypt(app)
+# ── Sécurité HTTPS + headers ───────────────────────────────
+Talisman(app,
+    force_https=False,               
+    strict_transport_security=True,
+    session_cookie_secure=False,    
+    content_security_policy={
+        'default-src': "'self'",
+        'script-src':  ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+        'style-src':   ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+        'img-src':     ["'self'", "data:"],
+        'font-src':    ["'self'", "cdn.jsdelivr.net"],
+    }
+)
+
+db            = SQLAlchemy(app)
+bcrypt        = Bcrypt(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+csrf          = CSRFProtect(app)
+
+login_manager.login_view             = 'login'
 login_manager.login_message_category = 'info'
-csrf = CSRFProtect(app)
+
+# ── Rate Limiting ──────────────────────────────────────────
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # ── Initialisation du Data Warehouse ───────────────────────
 from IUAInsight.Warehouse import init_dw, create_dw_tables
@@ -44,7 +75,7 @@ with app.app_context():
     )
 
     # ── Premier chargement ETL au démarrage ────────────────
-    from IUAInsight.Warehouse.models import FaitResultatEtudiant   # ← renommé
+    from IUAInsight.Warehouse.models import FaitResultatEtudiant
     from IUAInsight.Warehouse.etl_pipeline import ETLPipeline
     from IUAInsight.models import AnneeScolaire
 

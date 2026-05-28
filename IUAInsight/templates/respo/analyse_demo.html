@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #eef2f7;
+  background:  #eef2f7;
   min-height: 100vh;
   color: #1e2d3d;
 }
@@ -34,27 +34,19 @@ h2::after {
   color: #8da0b8 !important;
   margin-bottom: 24px;
 }
-
 .card {
   background: #ffffff !important;
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 2px 12px rgba(30,45,61,.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
-
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30,45,61,.12) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
-/*
-.row.mb-4 .col-6.col-md-3:nth-child(1) .card { border-top: 4px solid #3b82f6 !important; }
-.row.mb-4 .col-6.col-md-3:nth-child(2) .card { border-top: 4px solid #22c55e !important; }
-.row.mb-4 .col-6.col-md-3:nth-child(3) .card { border-top: 4px solid #f59e0b !important; }
-.row.mb-4 .col-6.col-md-3:nth-child(4) .card { border-top: 4px solid #a855f7 !important; }*/
 
-/* ── Cards KPI taille uniforme ── */
 .card.text-center .card-body {
   padding: 12px 8px !important;
   display: flex;
@@ -87,7 +79,6 @@ h2::after {
   text-align: center;
 }
 
-/* ── Icônes KPI ── */
 .row.mb-4 .card-body i {
   font-size: 15px;
   display: flex;
@@ -121,13 +112,11 @@ h2::after {
 
 small { font-size: 11px; font-weight: 400; color: #8da0b8; }
 
-/* ── Taille uniforme pour tous les canvas ── */
 .chart-wrap {
   position: relative;
   height: 220px;
 }
 
-/* ── Barre de filtres ── */
 .m1 {
   display: flex;
   align-items: center;
@@ -159,13 +148,13 @@ small { font-size: 11px; font-weight: 400; color: #8da0b8; }
   font-size: 10px;
 }
 
-/* ── Responsive ── */
 @media (max-width: 768px) {
   .card.text-center h4 { font-size: 1.2rem; }
   .card-body { padding: 10px !important; }
   .chart-wrap { height: 170px; }
 }
 </style>
+
 <br>
 
 <div class="container-fluid">
@@ -173,101 +162,96 @@ small { font-size: 11px; font-weight: 400; color: #8da0b8; }
   <p class="text-muted">Répartition des étudiants par genre, âge et origine</p>
 
   <!-- ── Filtres ── -->
- <form method="GET" action="" class="m1">
-  <select name="filiere" class="form-select form-select-sm" onchange="this.form.submit()">
-    <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
-    {% for f in filieres_list %}
-      <option value="{{ f.id_filiere }}" {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
-        {{ f.nom_filiere }}
-      </option>
-    {% endfor %}
-  </select>
+  <form method="GET" action="" class="m1" id="filtreForm">
 
- <select name="specialite" class="form-select form-select-sm" onchange="this.form.submit()">
-    <option value="all" {% if specialite_selected == 'all' %}selected{% endif %}>Spécialités</option>
-    {% for s in specialites %}
-      <option value="{{ s.id_specialite }}" {% if specialite_selected == s.id_specialite|string %}selected{% endif %}>
-        {{ s.nom_specialite }}
-      </option>
-    {% endfor %}
-  </select>
-<select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
-    <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
-    {% for n in niveaux %}
-      <option value="{{ n.id_niveau }}" {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
-        {{ n.libelle }}
-      </option>
-    {% endfor %}
-  </select>
-</form>
+    <select name="filiere" class="form-select form-select-sm" id="selectFiliere">
+      <option value="all" {% if filiere_selected == 'all' %}selected{% endif %}>Filières</option>
+      {% for f in filieres_list %}
+        <option value="{{ f.id_filiere }}"
+                {% if filiere_selected == f.id_filiere|string %}selected{% endif %}>
+          {{ f.nom_filiere }}
+        </option>
+      {% endfor %}
+    </select>
 
-<!-- KPI -->
-<div class="row mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <i class="bi bi-gender-female"></i>
+    <select name="specialite" class="form-select form-select-sm" id="selectSpecialite" onchange="this.form.submit()">
+      <option value="all" {% if specialite_selected == 'all' %}selected{% endif %}>Spécialités</option>
+      {% for s in specialites %}
+        <option value="{{ s.id_specialite }}"
+                data-filiere="{{ s.id_filiere }}"
+                {% if specialite_selected == s.id_specialite|string %}selected{% endif %}>
+          {{ s.nom_specialite }}
+        </option>
+      {% endfor %}
+    </select>
 
-        <h4>{{ femmes }}</h4>
-        <p>
-          {% if femmes == 1 %}Étudiante{% else %}Étudiantes{% endif %}
-        </p>
-        <small>
-      
-         {% if femmes_nationales == 1 %}Nationale{% else %}Nationales{% endif %} :  {{ femmes_nationales }}<br>
-        {% if femmes_etrangeres == 1 %}Etrangère{% else %}Etrangères{% endif %} :  {{ femmes_etrangeres }} 
-        </small>
+    <select name="niveau" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {% if niveau_selected == 'all' %}selected{% endif %}>Niveaux</option>
+      {% for n in niveaux %}
+        <option value="{{ n.id_niveau }}"
+                {% if niveau_selected == n.id_niveau|string %}selected{% endif %}>
+          {{ n.libelle }}
+        </option>
+      {% endfor %}
+    </select>
+
+  </form>
+
+  <!-- KPI -->
+  <div class="row mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm">
+        <div class="card-body">
+          <i class="bi bi-gender-female"></i>
+          <h4>{{ femmes }}</h4>
+          <p>{% if femmes == 1 %}Étudiante{% else %}Étudiantes{% endif %}</p>
+          <small>
+            {% if femmes_nationales == 1 %}Nationale{% else %}Nationales{% endif %} : {{ femmes_nationales }}<br>
+            {% if femmes_etrangeres == 1 %}Étrangère{% else %}Étrangères{% endif %} : {{ femmes_etrangeres }}
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm">
+        <div class="card-body">
+          <i class="bi bi-gender-male"></i>
+          <h4>{{ hommes }}</h4>
+          <p>{% if hommes == 1 %}Étudiant{% else %}Étudiants{% endif %}</p>
+          <small>
+            {% if hommes_nationaux == 1 %}National{% else %}Nationaux{% endif %} : {{ hommes_nationaux }}<br>
+            {% if hommes_etrangers == 1 %}Étranger{% else %}Étrangers{% endif %} : {{ hommes_etrangers }}
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm">
+        <div class="card-body">
+          <i class="bi bi-person-badge"></i>
+          <h4>{{ nb_nationalites }}</h4>
+          <p>{% if nb_nationalites == 1 %}Nationalité{% else %}Nationalités{% endif %}</p>
+          <small>
+            {% if nationaux == 1 %}National{% else %}Nationaux{% endif %} : {{ nationaux }}<br>
+            {% if etrangers == 1 %}Étranger{% else %}Étrangers{% endif %} : {{ etrangers }}
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm">
+        <div class="card-body">
+          <i class="bi bi-clock"></i>
+          <h4>{{ age_moyen }}</h4>
+          <p>Âge moyen</p>
+          <small><br><br></small>
+        </div>
       </div>
     </div>
   </div>
-
-  <div class="col-6 col-md-3">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <i class="bi bi-gender-male"></i>
-
-
-        <h4>{{ hommes }}</h4>
-        <p>
-          {% if hommes == 1 %}Étudiant{% else %}Étudiants{% endif %}
-        </p>
-        <small>
-        
-          {% if hommes_nationaux == 1 %}National{% else %}Nationaux{% endif %}: {{ hommes_nationaux }}<br>
-          {% if hommes_etrangers == 1 %}Etranger{% else %}Etrangers{% endif %}: {{ hommes_etrangers }}
-        </small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-3">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-        <i class="bi bi-person-badge"></i>
-        <h4>{{ nb_nationalites }}</h4>
-        <p>
-          {% if nb_nationalites == 1 %}Nationalité{% else %}Nationalités{% endif %}
-        </p>
-        <small>
-        {% if nationaux == 1 %}National{% else %}Nationaux{% endif %} : {{ nationaux }}<br>
-        {% if etrangers == 1 %}Ntranger{% else %}Etrangers{% endif %} : {{ etrangers }}
-        </small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-3">
-    <div class="card text-center shadow-sm">
-      <div class="card-body">
-<i class="bi bi-clock"></i>
-        <h4>{{ age_moyen }}</h4>
-        <p>Âge moyen <br></p>
-        <small><br><br></small>
-      </div>
-    </div>
-  </div>
-</div>
-
 
   <!-- Ligne 1 : Genre + Âge -->
   <div class="row">
@@ -398,6 +382,36 @@ small { font-size: 11px; font-weight: 400; color: #8da0b8; }
       }
     }
   });
+
+  // ── Filtre dynamique spécialités ──────────────────────────────────────
+  function filtrerSpecialites() {
+    const filiereVal = document.getElementById('selectFiliere').value;
+    const selectSp   = document.getElementById('selectSpecialite');
+    const options    = selectSp.querySelectorAll('option');
+
+    options.forEach(opt => {
+      if (opt.value === 'all') return;
+      if (filiereVal === 'all' || opt.dataset.filiere === filiereVal) {
+        opt.style.display = '';
+      } else {
+        opt.style.display = 'none';
+      }
+    });
+
+    // Reset spécialité si elle n'appartient plus à la filière sélectionnée
+    const selected = selectSp.querySelector('option:checked');
+    if (selected && selected.value !== 'all' && selected.style.display === 'none') {
+      selectSp.value = 'all';
+    }
+  }
+
+  document.getElementById('selectFiliere').addEventListener('change', function() {
+    filtrerSpecialites();
+    this.form.submit();
+  });
+
+  // Appliquer au chargement de la page
+  filtrerSpecialites();
 </script>
 
 {% endblock %}

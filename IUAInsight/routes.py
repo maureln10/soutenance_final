@@ -17,7 +17,7 @@ from IUAInsight.models import (
 # ── Modèles App (BD applicative : iua_app_db) ──────────────────────────────
 from IUAInsight.models_app import (
     Administrateur_sy, Respo_peda,
-    Rapport, Alerte 
+    Rapport, Alerte
 )
 
 import csv
@@ -150,7 +150,7 @@ def _query_inscriptions_avec_relations(annee_id=None):
         joinedload(Inscription.filiere),
         joinedload(Inscription.specialite),
         joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
-        joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX statut_simple
+        joinedload(Inscription.niveau).selectinload(Niveau.semestres),
         joinedload(Inscription.annee),
         selectinload(Inscription.resultats).joinedload(Resultat.matiere),
         selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -346,7 +346,7 @@ def _compter_abandon(inscriptions, semestre_filter):
 
 
 # ===================================================================
-# PARTIE RESPONSABLE ACADÉMIQUE
+# PARTIE RESPONSABLE PÉDAGOGIQUE
 # ===================================================================
 
 # ==========================
@@ -384,7 +384,12 @@ def tableau_de_bord():
     echec_pct    = round((echec    / inscrits) * 100, 2) if inscrits else 0
     abandon_pct  = round((abandon  / inscrits) * 100, 2) if inscrits else 0
 
-    ml_results_promo  = predict_batch(inscriptions)
+    # ── ML uniquement sur les étudiants ayant au moins une note ──────────
+    inscriptions_avec_notes = [
+        i for i in inscriptions
+        if i.moyenne_s1 is not None or i.moyenne_s2 is not None or i.moyenne_annuelle is not None
+    ]
+    ml_results_promo  = predict_batch(inscriptions_avec_notes)
     ml_niveaux        = [r["niveau_risque"]      for r in ml_results_promo if r]
     ml_probas_abandon = [r["probabilite_abandon"] for r in ml_results_promo if r]
     nb_critiques_ml    = sum(1 for n in ml_niveaux if n == "critique")
@@ -395,7 +400,7 @@ def tableau_de_bord():
     etudiants_risque   = nb_critiques_ml + nb_moderes_ml
 
     ml_critiques_par_filiere = {}
-    for ins, ml_r in zip(inscriptions, ml_results_promo):
+    for ins, ml_r in zip(inscriptions_avec_notes, ml_results_promo):
         if not ml_r:
             continue
         fid = ins.id_filiere
@@ -503,10 +508,10 @@ def tableau_de_bord():
         agg = appliquer_filtre_genre(agg, genre_filter)
         row = agg.first()
 
-        reussis_p = _to_float(row.reussis  if row else 0)
-        echecs_p  = _to_float(row.echecs   if row else 0)
-        abandons_p= _to_float(row.abandons if row else 0)
-        actifs_p  = reussis_p + echecs_p
+        reussis_p  = _to_float(row.reussis  if row else 0)
+        echecs_p   = _to_float(row.echecs   if row else 0)
+        abandons_p = _to_float(row.abandons if row else 0)
+        actifs_p   = reussis_p + echecs_p
         reussite_p = round(reussis_p  / actifs_p * 100, 2) if actifs_p else 0.0
         echec_p    = round(echecs_p   / actifs_p * 100, 2) if actifs_p else 0.0
         abandon_p  = round(abandons_p / total_p  * 100, 2) if total_p  else 0.0
@@ -546,19 +551,21 @@ def tableau_de_bord():
     niveau_agg_tb     = niveau_agg_tb.group_by(Inscription.id_niveau).all()
     niveaux_critiques = sum(1 for row in niveau_agg_tb if (row.total or 0) > 0 and (float(row.echecs or 0) / float(row.total)) >= 0.4)
 
+    # ── Alertes : suppression + recréation fraîche à chaque visite ──────
+    delete_alerte("echec_global_eleve")
+    delete_alerte("abandon_en_hausse")
+    delete_alerte("ml_critiques_promo")
+    db.session.flush()
+
     if echec_pct > 30:
         upsert_alerte("echec_global_eleve", f"Taux d'échec global élevé : {echec_pct}%")
-    else:
-        delete_alerte("echec_global_eleve")
     if abandon_pct > 15:
         upsert_alerte("abandon_en_hausse", f"Abandon en hausse : {abandon_pct}%")
-    else:
-        delete_alerte("abandon_en_hausse")
-    if nb_critiques_ml > 0:
+    if nb_critiques_ml > 0 or nb_moderes_ml > 0:
         upsert_alerte("ml_critiques_promo",
-            f"ML détecte {nb_critiques_ml} étudiant(s) en risque critique · {nb_abandons_ml} à fort risque d'abandon")
-    else:
-        delete_alerte("ml_critiques_promo")
+            f"IUADECIS détecte {etudiants_risque} étudiant(s) à risque "
+            f"({nb_critiques_ml} critiques · {nb_moderes_ml} modérés) · "
+            f"{nb_abandons_ml} à fort risque d'abandon")
 
     db.session.commit()
 
@@ -594,9 +601,11 @@ def tableau_de_bord():
         delta_reussite=delta_reussite,  sens_reussite=sens_reussite,
         delta_echec=delta_echec,        sens_echec=sens_echec,
         delta_abandon=delta_abandon,    sens_abandon=sens_abandon,
-        title='Tableau de bord global'
+        title='Tableau de bord global',
+        nb_admis=reussite,
+        nb_echec_abs=echec,
+        nb_abandon_abs=abandon,
     )
-
 
 # ==========================
 # TABLEAU SPÉCIALITÉ
@@ -692,13 +701,11 @@ def tableau_sp():
                 admis_dettes = None
                 redoublants  = None
                 ajournes     = sum(1 for i in insc_niv if i.moyenne_s1 is not None and i._credits_s1_apres_rattrapage() < i._credits_par_semestre())
-
             elif semestre_selected == "2":
                 admis        = sum(1 for i in insc_niv if i.moyenne_s2 is not None and i._credits_s2_apres_rattrapage() >= i._credits_par_semestre())
                 admis_dettes = None
                 redoublants  = None
                 ajournes     = sum(1 for i in insc_niv if i.moyenne_s2 is not None and i._credits_s2_apres_rattrapage() < i._credits_par_semestre())
-
             else:
                 redoublants  = sum(1 for i in insc_niv if i.statut_simple == "Redoublant")
                 admis        = sum(1 for i in insc_niv if i.statut_simple == "Admis")
@@ -761,6 +768,8 @@ def tableau_sp():
         liste=liste_flat, annee_active=annee_active,
         title="Comparaison par spécialité et niveau"
     )
+
+
 # ==========================
 # TABLEAU FILIÈRE
 # ==========================
@@ -1151,9 +1160,7 @@ def tableau_m():
     for mid, nom_sp in specialite_query.distinct().all():
         specialites_par_matiere.setdefault(mid, set()).add(nom_sp)
 
-    # ── Comptage ajournés / admis endettés selon semestre ──────────────────
     if semestre_selected == "all":
-        # Mode all : on compte les admis (dettes) par matière non validée
         insc_q = _query_inscriptions_avec_relations(
             annee_id=annee_active.id_annee if annee_active else None
         )
@@ -1180,7 +1187,6 @@ def tableau_m():
             if insc.statut_simple == "Admis (dettes)"
         )
     else:
-        # S1/S2 : logique SQL existante inchangée
         rows_ajournes_agg = (
             base_query
             .with_entities(
@@ -1200,7 +1206,6 @@ def tableau_m():
             .distinct()
             .count()
         )
-    # ───────────────────────────────────────────────────────────────────────
 
     stats = []
     for row in echec_agg:
@@ -1274,7 +1279,6 @@ def ajournes_matiere(id_matiere):
     )
 
     if semestre_selected == "all":
-        # Mode all → admis endettés sur cette matière
         insc_q = _query_inscriptions_avec_relations(
             annee_id=annee_active.id_annee if annee_active else None
         )
@@ -1305,7 +1309,6 @@ def ajournes_matiere(id_matiere):
         ajournes.sort(key=lambda x: x["moyenne"])
 
     else:
-        # S1/S2 → logique existante inchangée
         q = (
             db.session.query(
                 Etudiant.matricule, Etudiant.nom, Etudiant.prenom,
@@ -1681,14 +1684,14 @@ def rapport():
                     ["Indicateur", "Valeur"], ["Total inscrits", str(total + abandon)],
                     ["Admis", str(admis)], ["Échecs", str(echecs)], ["Abandons", str(abandon)],
                     ["Taux de réussite", f"{tx_r} %"], ["Taux d'échec", f"{tx_e} %"], ["Taux d'abandon", f"{tx_a} %"],
-                    ["ML — Risque critique", str(nb_critiques_r)], ["ML — Risque abandon (≥70%)", str(nb_abandons_r)],
+                    ["IUADECIS — Risque critique", str(nb_critiques_r)], ["IUADECIS — Risque abandon (≥70%)", str(nb_abandons_r)],
                 ]
             else:
                 kpi_rows = [
                     ["Indicateur", "Valeur"], ["Total inscrits", str(total)],
                     ["Admis", str(admis)], ["Échecs", str(echecs)],
                     ["Taux de réussite", f"{tx_r} %"], ["Taux d'échec", f"{tx_e} %"],
-                    ["ML — Risque critique", str(nb_critiques_r)], ["ML — Risque abandon (≥70%)", str(nb_abandons_r)],
+                    ["IUADECIS — Risque critique", str(nb_critiques_r)], ["IUADECIS — Risque abandon (≥70%)", str(nb_abandons_r)],
                 ]
 
         elif type_rapport == "Étudiants admis":
@@ -1711,7 +1714,7 @@ def rapport():
             nb_critiques_e = sum(1 for r in ml_results_echec if r and r["niveau_risque"] == "critique")
             kpi_rows = [
                 ["Indicateur", "Valeur"], ["Total en échec", str(total_echec)],
-                ["Taux d'échec", f"{tx_e} %"], ["ML — Risque critique parmi échecs", str(nb_critiques_e)],
+                ["Taux d'échec", f"{tx_e} %"], ["IUADECIS — Risque critique parmi échecs", str(nb_critiques_e)],
             ]
 
         elif type_rapport == "Abandon étudiants":
@@ -1723,7 +1726,7 @@ def rapport():
             nb_abandon_ml = sum(1 for r in ml_results_abandon if r and r["probabilite_abandon"] >= 0.7)
             kpi_rows = [
                 ["Indicateur", "Valeur"], ["Total abandons", str(total)],
-                ["ML — Abandon probable confirmé", str(nb_abandon_ml)],
+                ["IUADECIS — Abandon probable confirmé", str(nb_abandon_ml)],
             ]
 
         else:
@@ -2049,7 +2052,6 @@ def student():
     niveaux     = Niveau.query.order_by(Niveau.libelle).all()
     semestres   = get_semestres()
 
-    # ── Dictionnaire spécialités groupées par filière (pour le filtre dynamique) ──
     specialites_par_filiere = {}
     for s in specialites:
         fid = str(s.id_filiere)
@@ -2143,6 +2145,8 @@ def student():
         ml_source=ml_engine.status().get("risk_model_trained") and "ml" or "heuristic",
         title='Etudiants'
     )
+
+
 # ==========================
 # NOTES ÉTUDIANT
 # ==========================
@@ -2157,7 +2161,7 @@ def notes_etudiant(matricule):
         .filter_by(id_etudiant=etudiant.id_etudiant)
         .options(
             joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
-            joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
+            joinedload(Inscription.niveau).selectinload(Niveau.semestres),
             joinedload(Inscription.filiere),
             selectinload(Inscription.resultats).joinedload(Resultat.matiere),
             selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -2172,7 +2176,7 @@ def notes_etudiant(matricule):
             .filter_by(id_etudiant=etudiant.id_etudiant)
             .options(
                 joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
-                joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
+                joinedload(Inscription.niveau).selectinload(Niveau.semestres),
                 joinedload(Inscription.filiere),
                 selectinload(Inscription.resultats).joinedload(Resultat.matiere),
                 selectinload(Inscription.resultats).joinedload(Resultat.semestre),
@@ -2437,7 +2441,6 @@ def alerte():
             m2 = ins.moyenne_s2 if ins.moyenne_s2 is not None else 20
             moyenne = min(m1, m2)
 
-        # ── Crédits validés — FIX parité id_semestre ──────────────────────
         if semestre_selected == "1":
             credits_requis  = 30
             credits_valides = sum(
@@ -2462,7 +2465,6 @@ def alerte():
         credits_restants = max(0, credits_requis - credits_valides)
         taux_risque      = round((credits_restants / credits_requis * 100), 2) if credits_requis else 0
 
-        # ── Matières rattrapage — FIX parité id_semestre ──────────────────
         if semestre_selected == "1":
             matieres_rattrapage = sorted({
                 res.matiere.nom_matiere for res in ins.resultats
@@ -2671,7 +2673,7 @@ def alerte():
 
     if nb_abandons_ml > 0:
         upsert_alerte("ml_abandon_probable",
-            f"ML : {nb_abandons_ml} étudiant(s) à fort risque d'abandon (probabilité ≥ 70%)")
+            f"IUADECIS : {nb_abandons_ml} étudiant(s) à fort risque d'abandon (probabilité ≥ 70%)")
     else:
         delete_alerte("ml_abandon_probable")
 
@@ -2711,7 +2713,7 @@ def detail_risque(matricule):
         .filter_by(id_etudiant=etudiant.id_etudiant)
         .options(
             joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
-            joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
+            joinedload(Inscription.niveau).selectinload(Niveau.semestres),
             selectinload(Inscription.resultats).joinedload(Resultat.matiere),
         )
         .join(AnneeScolaire, Inscription.id_annee == AnneeScolaire.id_annee)
@@ -2723,7 +2725,7 @@ def detail_risque(matricule):
             .filter_by(id_etudiant=etudiant.id_etudiant)
             .options(
                 joinedload(Inscription.niveau).joinedload(Niveau.niveau_suivant),
-                joinedload(Inscription.niveau).selectinload(Niveau.semestres),  # ← FIX
+                joinedload(Inscription.niveau).selectinload(Niveau.semestres),
                 selectinload(Inscription.resultats).joinedload(Resultat.matiere),
             )
             .order_by(Inscription.id_inscription.desc()).first()
@@ -3093,7 +3095,6 @@ def parametrage():
             date_fin=parse_date(date_fin), active=True,
         ))
 
-        # ✅ Suppression de toutes les alertes de l'année précédente
         nb_alertes_supprimees = Alerte.query.delete()
         logger.info(
             "Changement d'année scolaire → %d alerte(s) supprimée(s) — nouvelle année : %s",
@@ -3147,6 +3148,7 @@ def parametrage():
         creation_bloquee=creation_bloquee, today=date.today(),
         ml_status=ml_engine.status(), title='Paramétrage académique'
     )
+
 
 @app.route("/dashboard")
 @admin_required
@@ -3245,7 +3247,6 @@ def init_scheduler(app):
                 logger.info("Clôture automatique : %s", annee.libelle)
                 bilan = cloture_annee(annee.id_annee)
                 if bilan.get("success"):
-                    # ✅ Supprimer toutes les anciennes alertes sauf la clôture
                     Alerte.query.filter(
                         Alerte.type_alerte != f"cloture_auto_{annee.id_annee}"
                     ).delete(synchronize_session=False)
@@ -3336,6 +3337,9 @@ def import_donnees():
             erreurs = []
             succes  = 0
 
+            # ================================================================
+            # IMPORT ÉTUDIANTS
+            # ================================================================
             if type_import == 'etudiants':
                 colonnes_requises = {'matricule', 'nom', 'prenom'}
                 if not colonnes_requises.issubset(set(df.columns)):
@@ -3345,54 +3349,79 @@ def import_donnees():
                 for i, row in df.iterrows():
                     try:
                         matricule = str(row['matricule']).strip()
-                        if not matricule or matricule == 'nan':
-                            erreurs.append(f"Ligne {i+2} : matricule vide")
+                        if not matricule or matricule.lower() == 'nan':
+                            erreurs.append(f"Ligne {i+2} : matricule vide — ligne ignorée")
+                            continue
+
+                        nom    = str(row.get('nom',    '')).strip()
+                        prenom = str(row.get('prenom', '')).strip()
+                        if not nom or not prenom:
+                            erreurs.append(f"Ligne {i+2} : nom ou prénom vide — ligne ignorée")
                             continue
 
                         annee_naissance = None
                         if 'annee_naissance' in df.columns:
                             try:
-                                annee_naissance = int(row['annee_naissance'])
+                                val = row['annee_naissance']
+                                if pd.notna(val):
+                                    annee_naissance = int(val)
+                                    if not (1950 <= annee_naissance <= 2015):
+                                        erreurs.append(f"Ligne {i+2} : annee_naissance {annee_naissance} suspecte (ignorée)")
+                                        annee_naissance = None
                             except (ValueError, TypeError):
-                                pass
+                                erreurs.append(f"Ligne {i+2} : annee_naissance invalide — ignorée")
 
                         id_nationalite = None
+                        # Priorité 1 : colonne id_nationalite
                         if 'id_nationalite' in df.columns:
                             try:
-                                id_nationalite = int(row['id_nationalite'])
+                                val = row['id_nationalite']
+                                if pd.notna(val) and str(val).strip() not in ('', 'nan'):
+                                    id_nationalite = int(val)
                             except (ValueError, TypeError):
-                                pass
-
-                        if 'pays' in df.columns and id_nationalite is None:
+                                erreurs.append(f"Ligne {i+2} : id_nationalite invalide — ignoré")
+                        # Priorité 2 : colonne pays (fallback)
+                        if id_nationalite is None and 'pays' in df.columns:
                             pays = str(row.get('pays', '')).strip()
-                            if pays and pays != 'nan':
-                                nat = Nationalite.query.filter(Nationalite.pays.ilike(pays)).first()
+                            if pays and pays.lower() != 'nan':
+                                nat = Nationalite.query.filter(
+                                    func.lower(Nationalite.pays) == pays.lower()
+                                ).first()
                                 if nat:
                                     id_nationalite = nat.id_nationalite
+                                else:
+                                    erreurs.append(f"Ligne {i+2} : pays '{pays}' introuvable dans la table Nationalite — ignoré")
+
+                        genre = None
+                        if 'genre' in df.columns:
+                            val = str(row.get('genre', '')).strip()
+                            if val and val.lower() != 'nan':
+                                genre = val
 
                         existing = Etudiant.query.filter_by(matricule=matricule).first()
                         if existing:
-                            existing.nom    = str(row.get('nom', '')).strip()
-                            existing.prenom = str(row.get('prenom', '')).strip()
-                            if 'genre' in df.columns:
-                                existing.genre = str(row.get('genre', '')).strip()
-                            if annee_naissance:
-                                existing.annee_naissance = annee_naissance
-                            if id_nationalite:
-                                existing.id_nationalite = id_nationalite
+                            existing.nom    = nom
+                            existing.prenom = prenom
+                            if genre           is not None: existing.genre           = genre
+                            if annee_naissance is not None: existing.annee_naissance = annee_naissance
+                            if id_nationalite  is not None: existing.id_nationalite  = id_nationalite
                         else:
                             db.session.add(Etudiant(
                                 matricule       = matricule,
-                                nom             = str(row.get('nom', '')).strip(),
-                                prenom          = str(row.get('prenom', '')).strip(),
-                                genre           = str(row.get('genre', '')).strip() if 'genre' in df.columns else None,
+                                nom             = nom,
+                                prenom          = prenom,
+                                genre           = genre,
                                 annee_naissance = annee_naissance,
                                 id_nationalite  = id_nationalite,
                             ))
                         succes += 1
-                    except Exception as e:
-                        erreurs.append(f"Ligne {i+2} : {str(e)}")
 
+                    except Exception as e:
+                        erreurs.append(f"Ligne {i+2} : erreur inattendue — {str(e)}")
+
+            # ================================================================
+            # IMPORT INSCRIPTIONS
+            # ================================================================
             elif type_import == 'inscriptions':
                 colonnes_requises = {'matricule', 'id_filiere', 'id_niveau'}
                 if not colonnes_requises.issubset(set(df.columns)):
@@ -3404,6 +3433,7 @@ def import_donnees():
                     flash("Aucune année scolaire active. Créez-en une dans Paramétrage.", "danger")
                     return redirect(url_for('import_donnees'))
 
+                # Pré-charger les IDs valides une seule fois (performance)
                 filieres_valides    = {f.id_filiere    for f in Filiere.query.all()}
                 niveaux_valides     = {n.id_niveau     for n in Niveau.query.all()}
                 specialites_valides = {s.id_specialite for s in Specialite.query.all()}
@@ -3411,13 +3441,13 @@ def import_donnees():
                 for i, row in df.iterrows():
                     try:
                         matricule = str(row['matricule']).strip()
-                        if not matricule or matricule == 'nan':
-                            erreurs.append(f"Ligne {i+2} : matricule vide")
+                        if not matricule or matricule.lower() == 'nan':
+                            erreurs.append(f"Ligne {i+2} : matricule vide — ligne ignorée")
                             continue
 
                         etudiant = Etudiant.query.filter_by(matricule=matricule).first()
                         if not etudiant:
-                            erreurs.append(f"Ligne {i+2} : étudiant '{matricule}' introuvable")
+                            erreurs.append(f"Ligne {i+2} : étudiant '{matricule}' introuvable — importez d'abord les étudiants")
                             continue
 
                         try:
@@ -3426,7 +3456,7 @@ def import_donnees():
                             erreurs.append(f"Ligne {i+2} : id_filiere invalide")
                             continue
                         if id_filiere not in filieres_valides:
-                            erreurs.append(f"Ligne {i+2} : filière {id_filiere} introuvable")
+                            erreurs.append(f"Ligne {i+2} : filière {id_filiere} introuvable en base")
                             continue
 
                         try:
@@ -3435,7 +3465,7 @@ def import_donnees():
                             erreurs.append(f"Ligne {i+2} : id_niveau invalide")
                             continue
                         if id_niveau not in niveaux_valides:
-                            erreurs.append(f"Ligne {i+2} : niveau {id_niveau} introuvable")
+                            erreurs.append(f"Ligne {i+2} : niveau {id_niveau} introuvable en base")
                             continue
 
                         id_specialite = None
@@ -3445,10 +3475,10 @@ def import_donnees():
                                 if pd.notna(val) and str(val).strip() not in ('', 'nan'):
                                     id_specialite = int(val)
                                     if id_specialite not in specialites_valides:
-                                        erreurs.append(f"Ligne {i+2} : spécialité {id_specialite} introuvable")
+                                        erreurs.append(f"Ligne {i+2} : spécialité {id_specialite} introuvable en base — ligne ignorée")
                                         continue
                             except (ValueError, TypeError):
-                                pass
+                                erreurs.append(f"Ligne {i+2} : id_specialite invalide — ignoré")
 
                         est_redoublant = False
                         if 'est_redoublant' in df.columns:
@@ -3458,14 +3488,15 @@ def import_donnees():
                             except Exception:
                                 pass
 
+                        # Upsert : on identifie une inscription par etudiant + annee + filiere + niveau
                         existing = Inscription.query.filter_by(
-                            id_etudiant = etudiant.id_etudiant,
-                            id_annee    = annee_active.id_annee,
-                            id_niveau   = id_niveau,
+                            id_etudiant  = etudiant.id_etudiant,
+                            id_annee     = annee_active.id_annee,
+                            id_filiere   = id_filiere,
+                            id_niveau    = id_niveau,
                         ).first()
 
                         if existing:
-                            existing.id_filiere     = id_filiere
                             existing.id_specialite  = id_specialite
                             existing.est_redoublant = est_redoublant
                         else:
@@ -3478,9 +3509,13 @@ def import_donnees():
                                 est_redoublant = est_redoublant,
                             ))
                         succes += 1
-                    except Exception as e:
-                        erreurs.append(f"Ligne {i+2} : {str(e)}")
 
+                    except Exception as e:
+                        erreurs.append(f"Ligne {i+2} : erreur inattendue — {str(e)}")
+
+            # ================================================================
+            # IMPORT NOTES
+            # ================================================================
             elif type_import == 'notes':
                 colonnes_requises = {'matricule', 'nom_matiere', 'moyenne'}
                 if not colonnes_requises.issubset(set(df.columns)):
@@ -3492,7 +3527,21 @@ def import_donnees():
                     flash("Aucune année scolaire active.", "danger")
                     return redirect(url_for('import_donnees'))
 
-                matieres_cache = {m.nom_matiere.lower(): m for m in Matiere.query.all()}
+                # CORRECTION : avertir si colonne id_semestre absente
+                if 'id_semestre' not in df.columns:
+                    flash(
+                        "⚠️ Colonne 'id_semestre' absente — toutes les notes seront importées en Semestre 1 par défaut.",
+                        "warning"
+                    )
+
+                # Pré-charger les matières (cache)
+                matieres_cache = {
+                    m.nom_matiere.lower().strip(): m
+                    for m in Matiere.query.all()
+                }
+                # Pré-charger les semestres
+                semestres_cache = {s.id_semestre: s for s in Semestre.query.all()}
+
                 inscriptions_a_recalculer = {}
 
                 for i, row in df.iterrows():
@@ -3500,12 +3549,24 @@ def import_donnees():
                         matricule   = str(row['matricule']).strip()
                         nom_matiere = str(row['nom_matiere']).strip()
 
+                        if not matricule or matricule.lower() == 'nan':
+                            erreurs.append(f"Ligne {i+2} : matricule vide — ligne ignorée")
+                            continue
+                        if not nom_matiere or nom_matiere.lower() == 'nan':
+                            erreurs.append(f"Ligne {i+2} : nom_matiere vide — ligne ignorée")
+                            continue
+
+                        # Validation moyenne
                         try:
                             moyenne = float(row['moyenne'])
                         except (ValueError, TypeError):
-                            erreurs.append(f"Ligne {i+2} : moyenne invalide")
+                            erreurs.append(f"Ligne {i+2} : moyenne invalide ('{row['moyenne']}')")
+                            continue
+                        if not (0 <= moyenne <= 20):
+                            erreurs.append(f"Ligne {i+2} : moyenne {moyenne} hors plage [0–20] — ligne ignorée")
                             continue
 
+                        # id_semestre
                         if 'id_semestre' not in df.columns:
                             id_semestre = 1
                         else:
@@ -3515,9 +3576,9 @@ def import_donnees():
                                 erreurs.append(f"Ligne {i+2} : id_semestre invalide")
                                 continue
 
-                        semestre = Semestre.query.get(id_semestre)
+                        semestre = semestres_cache.get(id_semestre)
                         if not semestre:
-                            erreurs.append(f"Ligne {i+2} : semestre {id_semestre} introuvable")
+                            erreurs.append(f"Ligne {i+2} : semestre {id_semestre} introuvable en base")
                             continue
 
                         etudiant = Etudiant.query.filter_by(matricule=matricule).first()
@@ -3525,27 +3586,26 @@ def import_donnees():
                             erreurs.append(f"Ligne {i+2} : étudiant '{matricule}' introuvable")
                             continue
 
-                        matiere = matieres_cache.get(nom_matiere.lower())
+                        matiere = matieres_cache.get(nom_matiere.lower().strip())
                         if not matiere:
-                            erreurs.append(f"Ligne {i+2} : matière '{nom_matiere}' introuvable")
+                            erreurs.append(f"Ligne {i+2} : matière '{nom_matiere}' introuvable en base")
                             continue
 
                         inscription = Inscription.query.filter_by(
                             id_etudiant = etudiant.id_etudiant,
-                            id_annee    = annee_active.id_annee
+                            id_annee    = annee_active.id_annee,
                         ).first()
                         if not inscription:
-                            erreurs.append(f"Ligne {i+2} : aucune inscription pour '{matricule}'")
-                            continue
-
-                        if not (0 <= moyenne <= 20):
-                            erreurs.append(f"Ligne {i+2} : moyenne {moyenne} hors plage (0-20)")
+                            erreurs.append(
+                                f"Ligne {i+2} : aucune inscription pour '{matricule}' "
+                                f"cette année — importez d'abord les inscriptions"
+                            )
                             continue
 
                         existing = Resultat.query.filter_by(
                             id_inscription = inscription.id_inscription,
                             id_matiere     = matiere.id_matiere,
-                            id_semestre    = id_semestre
+                            id_semestre    = id_semestre,
                         ).first()
 
                         if existing:
@@ -3560,15 +3620,14 @@ def import_donnees():
                                 credit_valide  = moyenne >= 10.0,
                             ))
 
-                        cle = (inscription.id_inscription, id_semestre)
-                        inscriptions_a_recalculer[cle] = (inscription, semestre)
-
+                        inscriptions_a_recalculer[(inscription.id_inscription, id_semestre)] = (inscription, semestre)
                         succes += 1
+
                     except Exception as e:
-                        erreurs.append(f"Ligne {i+2} : {str(e)}")
+                        erreurs.append(f"Ligne {i+2} : erreur inattendue — {str(e)}")
 
+                # Recalcul des moyennes après flush
                 db.session.flush()
-
                 for (id_insc, id_sem), (inscription, semestre) in inscriptions_a_recalculer.items():
                     db.session.refresh(inscription)
                     moy = inscription.recalculer_moyenne_semestrielle(id_sem)
@@ -3582,10 +3641,13 @@ def import_donnees():
                 flash("Type d'import inconnu.", "danger")
                 return redirect(url_for('import_donnees'))
 
+            # ================================================================
+            # COMMIT FINAL + RÉSUMÉ
+            # ================================================================
             db.session.commit()
 
             if erreurs:
-                flash(f"{succes} importé(s) · {len(erreurs)} erreur(s)", "warning")
+                flash(f"✅ {succes} importé(s) — ⚠️ {len(erreurs)} erreur(s)", "warning")
                 for err in erreurs[:10]:
                     flash(err, "danger")
                 if len(erreurs) > 10:
@@ -3599,6 +3661,9 @@ def import_donnees():
 
         return redirect(url_for('import_donnees'))
 
+    # ================================================================
+    # GET — affichage du formulaire
+    # ================================================================
     annee_active = get_annee_active()
     filieres     = Filiere.query.order_by(Filiere.nom_filiere).all()
     niveaux      = Niveau.query.order_by(Niveau.libelle).all()
@@ -3614,7 +3679,6 @@ def import_donnees():
         specialites  = specialites,
         semestres    = semestres,
     )
-
 
 @app.route('/import/template/<type_import>')
 @admin_required
@@ -3737,10 +3801,10 @@ def etl_page():
                 engine = create_engine(uri)
                 with engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
-                message = "✅ Connexion réussie à la base lmd1"
+                message = "Connexion réussie à la base lmd1"
                 succes  = True
             except Exception as e:
-                message = f"❌ Connexion échouée : {e}"
+                message = f" Connexion échouée : {e}"
                 succes  = False
 
         elif action == "lancer_etl":
@@ -3748,13 +3812,13 @@ def etl_page():
             try:
                 success_etl = ETLPipeline().run(annee_id=annee.id_annee if annee else None)
                 if success_etl:
-                    message = "✅ ETL terminé avec succès — Data Warehouse mis à jour."
+                    message = " ETL terminé avec succès — Data Warehouse mis à jour."
                     succes  = True
                 else:
-                    message = "❌ ETL échoué — vérifiez les logs."
+                    message = " ETL échoué — vérifiez les logs."
                     succes  = False
             except Exception as e:
-                message = f"❌ Erreur ETL : {e}"
+                message = f" Erreur ETL : {e}"
                 succes  = False
 
     annee_active = get_annee_active()
@@ -3765,4 +3829,3 @@ def etl_page():
         annee_active=annee_active,
         title="Connexion ETL"
     )
-

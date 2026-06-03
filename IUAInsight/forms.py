@@ -4,7 +4,6 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional
 from flask_login import current_user
 from IUAInsight.models_app import Administrateur_sy, Respo_peda
-from functools import wraps
 from flask import abort
 
 

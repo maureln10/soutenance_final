@@ -28,9 +28,9 @@ app.config['SQLALCHEMY_BINDS'] = {
 
 # ── Sécurité HTTPS + headers ───────────────────────────────
 Talisman(app,
-    force_https=False,               
+    force_https=False,
     strict_transport_security=True,
-    session_cookie_secure=False,    
+    session_cookie_secure=False,
     content_security_policy={
         'default-src': "'self'",
         'script-src':  ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
@@ -63,18 +63,23 @@ create_dw_tables(app)
 
 # ── Routes & modèles app ────────────────────────────────────
 from IUAInsight import routes
-from IUAInsight import models_app  # Administrateur, Respo, Rapport, Alerte, Sauvegarde
+from IUAInsight import models_app
 
-# ── Entraînement ML automatique au démarrage ───────────────
+# ── Démarrage : ML + ETL ───────────────────────────────────
 from IUAInsight.ml_models import ml_engine
 from IUAInsight.models import Inscription
 
 with app.app_context():
-    ml_engine.auto_train_if_needed(
-        lambda: Inscription.query.all()
-    )
 
-    # ── Premier chargement ETL au démarrage ────────────────
+    # Entraînement ML forcé (recharge le modèle avec les features actuelles)
+    result = ml_engine.auto_train_if_needed(
+        lambda: Inscription.query.all(),
+        force=True
+    )
+    print(f"[ML BOOT] résultat : {result}")
+    print(f"[ML BOOT] status   : {ml_engine.status()}")
+
+    # Premier chargement ETL si le Data Warehouse est vide
     from IUAInsight.Warehouse.models import FaitResultatEtudiant
     from IUAInsight.Warehouse.etl_pipeline import ETLPipeline
     from IUAInsight.models import AnneeScolaire

@@ -40,7 +40,6 @@ h2::after {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  /* ✦ CORRIGÉ : double couche de shadow bien visible */
   box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
@@ -49,7 +48,6 @@ h2::after {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
- 
 
 .kpi-row { margin-bottom: 20px; }
 .kpi-row .col-md-2 { padding: 0 8px; margin-bottom: 16px; }
@@ -170,7 +168,7 @@ canvas {
 
 .grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns:  1fr;
   gap: 20px;
 }
 
@@ -214,7 +212,7 @@ td { font-size: 0.8rem; color: #2d4057; }
   top: 20px;
   right: 24px;
   z-index: 9999;
-  width: 420px;
+  width: 460px;
   max-width: calc(100vw - 32px);
   pointer-events: none;
 }
@@ -222,11 +220,9 @@ td { font-size: 0.8rem; color: #2d4057; }
 .iua-toast {
   pointer-events: all;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   width: 100%;
-  min-width: 300px;
-  max-width: 420px;
   padding: 14px 18px;
   border-radius: 10px;
   font-size: 0.82rem;
@@ -238,17 +234,27 @@ td { font-size: 0.8rem; color: #2d4057; }
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-.iua-toast.success { background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; }
-.iua-toast.danger  { background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; }
-.iua-toast.warning { background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e; }
-.iua-toast.info    { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; }
+.iua-toast.success  { background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; }
+.iua-toast.danger   { background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; }
+.iua-toast.warning  { background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e; }
+.iua-toast.info     { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; }
 .iua-toast.critique { background: #fef2f2; border-left: 4px solid #f43f5e; color: #881337; }
 
-.iua-toast i { font-size: 1.1rem; flex-shrink: 0; }
+.iua-toast i { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
 
-.toast-body { flex: 1; }
-.toast-body .toast-title { font-weight: 700; font-size: 0.78rem; margin-bottom: 2px; }
-.toast-body .toast-msg   { font-size: 0.76rem; opacity: 0.85; line-height: 1.4; }
+.toast-body { flex: 1; min-width: 0; }
+.toast-body .toast-title {
+  font-weight: 700;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+.toast-body .toast-msg {
+  font-size: 0.76rem;
+  opacity: 0.85;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: normal;
+}
 
 .toast-close {
   background: none;
@@ -260,7 +266,16 @@ td { font-size: 0.8rem; color: #2d4057; }
   padding: 0;
   line-height: 1;
   flex-shrink: 0;
+  margin-top: 1px;
 }
+/* ── KPI Nombres absolus ── */
+.kpi-abs .col-md-4:nth-child(1) .card h4 { color: #22c55e; }
+.kpi-abs .col-md-4:nth-child(2) .card h4 { color: #ef4444; }
+.kpi-abs .col-md-4:nth-child(3) .card h4 { color: #f59e0b; }
+
+.kpi-abs .col-md-4:nth-child(1) .card-body i { color: #22c55e; background: #dcfce7; }
+.kpi-abs .col-md-4:nth-child(2) .card-body i { color: #ef4444; background: #fee2e2; }
+.kpi-abs .col-md-4:nth-child(3) .card-body i { color: #f59e0b; background: #fef3c7; }
 .toast-close:hover { opacity: 1; }
 
 @media (max-width: 768px) {
@@ -276,7 +291,6 @@ td { font-size: 0.8rem; color: #2d4057; }
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
 <!-- ── Toast stack ── -->
 <div id="toast-stack"></div>
 
@@ -289,7 +303,7 @@ td { font-size: 0.8rem; color: #2d4057; }
 
 <div class="container-fluid">
 
-  <h2 class="mb-3">Tableau de Bord Global</h2><br><br>
+  <h2 class="mb-3">Tableau de Bord </h2><br><br>
   <p class="text-muted">
     Vue d'ensemble des indicateurs académiques ·
     {% if annee_active %}{{ annee_active.libelle }}{% endif %}
@@ -390,7 +404,7 @@ td { font-size: 0.8rem; color: #2d4057; }
           <i class="bi bi-person-exclamation"></i>
           <h4>{{ etudiants_risque }}</h4>
           <p>Étudiants à Risque</p>
-          <span style="font-size:10px;color:#8da0b8">Après analyse</span>
+          <span style="font-size:10px;color:#8da0b8">IUADECIS - prédictions</span>
         </div>
       </div>
     </div>
@@ -405,7 +419,36 @@ td { font-size: 0.8rem; color: #2d4057; }
         </div>
       </div>
     </div>
-
+<!-- ── KPI Nombres absolus ── -->
+<div class="row kpi-row kpi-abs mb-3">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="bi bi-check-circle"></i>
+        <h4 style="color:#22c55e">{{ nb_admis }}</h4>
+        <p>Étudiants Admis</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="bi bi-x-circle"></i>
+        <h4 style="color:#ef4444">{{ nb_echec_abs }}</h4>
+        <p>Étudiants en Échec</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <i class="bi bi-person-x"></i>
+        <h4 style="color:#f59e0b">{{ nb_abandon_abs }}</h4>
+        <p>Étudiants en Abandon</p>
+      </div>
+    </div>
+  </div>
+</div>
   </div>
 
   <!-- ── Bar + Pie ── -->
@@ -480,16 +523,17 @@ td { font-size: 0.8rem; color: #2d4057; }
     </div>
   </div>
 
-<!-- ── Distribution ── -->
-<div class="card mb-4">
-  <div class="card-header">Distribution des performances par filière</div>
-  <div class="card-body" style="height:260px">
-    <canvas id="distributionChart"></canvas>
+  <!-- ── Distribution ── -->
+  <div class="card mb-4">
+    <div class="card-header">Distribution des performances par filière</div>
+    <div class="card-body" style="height:260px">
+      <canvas id="distributionChart"></canvas>
+    </div>
   </div>
-</div>
+
   <!-- ── Évolution ── -->
   <div class="card mb-4">
-    <div class="card-header">Évolution</div>
+    <div class="card-header">Évolution du taux de réussite , échec , abandon par filière</div>
     <div class="card-body" style="height:260px">
       <canvas id="lineChart"></canvas>
     </div>
@@ -540,23 +584,7 @@ td { font-size: 0.8rem; color: #2d4057; }
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">Alertes &amp; Signaux
-        <span class="maurel2">
-          {{ nb_alertes }} {{ 'alerte' if nb_alertes == 1 else 'alertes' }}
-        </span>
-      </div>
-      <ul class="list-group list-group-flush">
-        {% for a in alertes %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>{{ a.message }}</span>
-            <small class="text-muted">{{ a.date }}</small>
-          </li>
-        {% else %}
-          <li class="list-group-item text-center text-muted">Aucune alerte</li>
-        {% endfor %}
-      </ul>
-    </div>
+  
 
   </div>
 
@@ -712,25 +740,63 @@ new Chart(document.getElementById('lineChart'), {
   }
 });
 
-/* ── Système de toasts séquentiels en haut ── */
+/* ── Système de toasts séquentiels ── */
 (function () {
 
+  /**
+   * Détermine le type et le label du toast à partir du message.
+   * ✅ FIX : on extrait le label depuis le message lui-même (avant le premier espace
+   *          ou le premier chiffre) pour éviter que le titre soit "ML Alerte" ou
+   *          "Critique" pendant que le corps commence par "détecte …".
+   *          Le message complet est toujours affiché en entier dans toast-msg.
+   */
   function classifier(message) {
     const m = message.toLowerCase();
-    if (m.includes('critique') || m.includes('risque critique') || m.includes('abandon probable'))
-      return { type: 'critique', label: 'Critique' };
-    if (m.includes('échec') || m.includes('echec') || m.includes('élevé') || m.includes('eleve'))
-      return { type: 'danger', label: 'Échec' };
-    if (m.includes('abandon') || m.includes('modéré') || m.includes('modere') || m.includes('faible réussite') || m.includes('faible reussite'))
-      return { type: 'warning', label: 'Attention' };
-    if (m.includes('redoublant') || m.includes('effectif faible') || m.includes('surveillance'))
-      return { type: 'danger', label: 'Échec' };
-    if (m.includes('ml') || m.includes('détecte') || m.includes('detecte'))
-      return { type: 'critique', label: 'ML Alerte' };
+
+    // Priorité 1 — risque critique ML (ex: "IUADECIS détecte X étudiant(s) en risque critique")
+    if (m.includes('risque critique') || m.includes('abandon probable') || m.includes('iuadecis')) {
+      return { type: 'critique', label: 'IUADECIS ' };
+    }
+    // Priorité 2 — taux d'échec élevé
+    if (m.includes('taux d\'échec') || m.includes('taux d\'echec') || m.includes('échec global') || m.includes('echec global')) {
+      return { type: 'danger', label: 'Taux d\'échec élevé' };
+    }
+    // Priorité 3 — abandon
+    if (m.includes('abandon en hausse') || m.includes('rapport abandon')) {
+      return { type: 'warning', label: 'Abandon en hausse' };
+    }
+    // Priorité 4 — abandon par filière
+    if (m.includes('abandon détecté') || m.includes('abandon detecte')) {
+      return { type: 'warning', label: 'Abandon détecté' };
+    }
+    // Priorité 5 — étudiants à risque
+    if (m.includes('étudiant(s) à risque') || m.includes('etudiant(s) a risque')) {
+      return { type: 'danger', label: 'Étudiants à risque' };
+    }
+    // Priorité 6 — matière critique
+    if (m.includes('matière critique') || m.includes('matiere critique')) {
+      return { type: 'danger', label: 'Matière critique' };
+    }
+    // Priorité 7 — faible réussite
+    if (m.includes('faible réussite') || m.includes('faible reussite')) {
+      return { type: 'warning', label: 'Faible réussite' };
+    }
+    // Priorité 8 — redoublants
+    if (m.includes('redoublant')) {
+      return { type: 'warning', label: 'Redoublants détectés' };
+    }
+    // Priorité 9 — effectif faible
+    if (m.includes('effectif faible')) {
+      return { type: 'info', label: 'Effectif faible' };
+    }
+    // Priorité 10 — clôture
+    if (m.includes('clôture') || m.includes('cloture')) {
+      return { type: 'success', label: 'Clôture automatique' };
+    }
     return { type: 'info', label: 'Alerte' };
   }
 
-  const DISPLAY_DURATION = 4000;
+  const DISPLAY_DURATION = 5000;
   const TRANSITION       = 400;
 
   const stack = document.getElementById('toast-stack');
@@ -738,18 +804,18 @@ new Chart(document.getElementById('lineChart'), {
   let queue        = [];
   let isRunning    = false;
 
+  const ICONS = {
+    danger:   'bi-x-circle-fill',
+    warning:  'bi-exclamation-triangle-fill',
+    info:     'bi-info-circle-fill',
+    success:  'bi-check-circle-fill',
+    critique: 'bi-exclamation-octagon-fill',
+  };
+
   function buildToast(message) {
     const { type, label } = classifier(message);
     const toast = document.createElement('div');
     toast.className = `iua-toast ${type}`;
-
-    const ICONS = {
-      danger:   'bi-x-circle-fill',
-      warning:  'bi-exclamation-triangle-fill',
-      info:     'bi-info-circle-fill',
-      success:  'bi-check-circle-fill',
-      critique: 'bi-exclamation-octagon-fill',
-    };
 
     toast.innerHTML = `
       <i class="bi ${ICONS[type] || 'bi-bell-fill'}"></i>
@@ -777,7 +843,6 @@ new Chart(document.getElementById('lineChart'), {
     stack.appendChild(toast);
     currentToast = toast;
 
-    /* Entrée : glissement depuis la droite comme la page Rapports */
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         toast.style.opacity   = '1';

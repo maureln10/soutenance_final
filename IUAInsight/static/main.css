@@ -8,15 +8,15 @@
 /* ── Variables ─────────────────────────────────────────────── */
 :root {
   --sidebar-bg:       #0c1829;
-  --sidebar-width:    252px;
+  --sidebar-width:    272px;                /* ✅ élargi : 252px → 272px */
   --accent:           #4f7cff;
   --accent-soft:      rgba(79, 124, 255, 0.10);
   --accent-glow:      rgba(79, 124, 255, 0.30);
   --accent-hover:     #3a68f5;
-  --sidebar-text:    #becace;
-  --sidebar-hover:    rgba(255, 255, 255, 0.04);
-  --sidebar-active:   rgba(79, 124, 255, 0.16);
-  --section-title:    #3d4a5e;
+ --sidebar-text: #ffffff;  /* était #d6dfe8 */             /* ✅ plus clair : #becace → #d6dfe8 */
+  --sidebar-hover:    rgba(255, 255, 255, 0.06);
+  --sidebar-active:   rgba(79, 124, 255, 0.18);
+--section-title: #a8bfd4;  /* était #7a8fa8 */             /* ✅ corrigé : #3d4a5e → #7a8fa8 */
   --content-bg:       #f3f6fb;
   --card-bg:          #ffffff;
   --text-primary:     #0f1623;
@@ -41,8 +41,8 @@ a.notif-btn {
 }
 html, body {
   height: 100%;
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;           /* ↑ 13.5px → 16px */
+  font-family: 'Inter', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-primary);
   background: var(--content-bg);
@@ -58,8 +58,8 @@ a {
 p {
   color: var(--text-secondary);
   line-height: 1.6;
-  font-weight: 500;
-  font-size: 15px;           /* ↑ héritage → 15px */
+  font-weight: 400;                        /* ✅ 500 → 400 (Poppins 500 est déjà épais) */
+  font-size: 15px;
 }
 
 /* ── Layout ─────────────────────────────────────────────────── */
@@ -82,7 +82,7 @@ p {
   scrollbar-width: none;
   position: relative;
   z-index: 10;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sidebar::before {
@@ -100,13 +100,13 @@ p {
 
 /* Logo */
 .logo {
-  font-family: 'Inter', sans-serif;
-  font-size: 20px;           /* ↑ 17px → 20px */
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 20px;
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   padding: 26px 22px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -114,7 +114,7 @@ p {
 
 .logo i {
   color: var(--accent);
-  font-size: 1.35rem;        /* ↑ 1.2rem → 1.35rem */
+  font-size: 1.35rem;
 }
 
 /* Nav */
@@ -126,11 +126,11 @@ p {
 
 .section-title {
   display: block;
-  font-size: 0.72rem;        /* ↑ 0.62rem → 0.72rem */
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--section-title);
+  color: var(--section-title);             /* ✅ bien visible */
   padding: 20px 22px 5px;
   user-select: none;
 }
@@ -140,8 +140,8 @@ p {
   align-items: center;
   gap: 10px;
   padding: 10px 22px;
-  color: var(--sidebar-text);
-  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  color: var(--sidebar-text);             /* ✅ plus contrasté */
+  font-size: 0.92rem;
   font-weight: 500;
   transition: color var(--transition), background var(--transition);
   position: relative;
@@ -149,15 +149,15 @@ p {
 }
 
 .menu-item i {
-  font-size: 1.1rem;         /* ↑ 0.95rem → 1.1rem */
+  font-size: 1.1rem;
   width: 20px;
   flex-shrink: 0;
-  opacity: 0.75;
+  opacity: 0.8;                            /* ✅ plus visible : 0.75 → 0.8 */
   transition: opacity var(--transition), transform var(--transition);
 }
 
 .menu-item:hover {
-  color: #e8edf8;
+  color: #f0f4ff;                          /* ✅ plus lumineux au survol */
   background: var(--sidebar-hover);
 }
 
@@ -191,7 +191,7 @@ p {
 /* Sidebar bottom */
 .sidebar-bottom {
   padding: 14px 12px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .logout-btn {
@@ -201,17 +201,17 @@ p {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-size: 0.92rem;
   font-weight: 600;
-  color: white;
+  color: #d6dfe8;                          /* ✅ bien visible */
   background: transparent;
   transition: color var(--transition), background var(--transition);
   cursor: pointer;
   border: none;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
 }
 
-.logout-btn i { font-size: 1.1rem; }  /* ↑ 0.95rem → 1.1rem */
+.logout-btn i { font-size: 1.1rem; }
 
 .logout-btn:hover {
   color: #ff7b7b;
@@ -245,7 +245,7 @@ p {
 }
 
 .content-section .logo {
-  font-size: 18px;           /* ↑ 16px → 18px */
+  font-size: 18px;
   padding: 0;
   border-bottom: none;
   color: var(--text-primary);
@@ -267,13 +267,13 @@ p {
 }
 
 .content-section strong {
-  font-size: 0.97rem;        /* ↑ 0.85rem → 0.97rem */
+  font-size: 0.97rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .content-section small {
-  font-size: 0.83rem;        /* ↑ 0.72rem → 0.83rem */
+  font-size: 0.83rem;
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -326,19 +326,19 @@ p {
 }
 
 .stat-value {
-  font-family: 'Inter', sans-serif;
-  font-size: 2.4rem;         /* ↑ 1.9rem → 2.4rem */
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 2.4rem;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
-  font-size: 0.87rem;        /* ↑ 0.75rem → 0.87rem */
+  font-size: 0.82rem;
   color: var(--text-secondary);
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-top: 7px;
 }
@@ -349,7 +349,7 @@ p {
   align-items: center;
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.83rem;        /* ↑ 0.72rem → 0.83rem */
+  font-size: 0.83rem;
   font-weight: 700;
   background: var(--accent-soft);
   color: var(--accent);
@@ -364,9 +364,9 @@ p {
 }
 
 .table thead th {
-  font-size: 0.82rem;        /* ↑ 0.7rem → 0.82rem */
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
   padding: 12px 16px;
@@ -377,8 +377,8 @@ p {
 
 .table tbody td {
   padding: 13px 16px;
-  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 400;                        /* ✅ Poppins 400 suffit dans les tableaux */
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
@@ -400,8 +400,8 @@ p {
   border: none;
   border-radius: var(--radius-sm);
   color: #fff;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 0.92rem;
   font-weight: 600;
   padding: 10px 22px;
   cursor: pointer;
@@ -429,8 +429,8 @@ p {
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 0.92rem;
   font-weight: 600;
   padding: 9px 20px;
   cursor: pointer;
@@ -450,9 +450,9 @@ p {
 /* ── Form inputs ────────────────────────────────────────────── */
 .form-control,
 .form-select {
-  font-family: 'Inter', sans-serif;
-  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
-  font-weight: 500;
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 0.95rem;
+  font-weight: 400;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 16px;
@@ -476,20 +476,20 @@ p {
 
 /* ── Section headings ───────────────────────────────────────── */
 .section-heading {
-  font-family: 'Inter', sans-serif;
-  font-size: 1.65rem;        /* ↑ 1.35rem → 1.65rem */
-  font-weight: 800;
+  font-family: 'Poppins', sans-serif;      /* ✅ Inter → Poppins */
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .section-sub {
-  font-size: 0.97rem;        /* ↑ 0.82rem → 0.97rem */
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 400;
   color: var(--text-secondary);
   margin-bottom: 22px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* ── Alerts ─────────────────────────────────────────────────── */
@@ -498,7 +498,7 @@ p {
   border: 1px solid rgba(79, 124, 255, 0.18);
   border-radius: 10px;
   color: var(--accent);
-  font-size: 1rem;           /* ↑ 0.875rem → 1rem */
+  font-size: 0.95rem;
   font-weight: 500;
   padding: 13px 18px;
   display: flex;
@@ -571,7 +571,7 @@ p {
 .menu-badge {
   background: #ef4444;
   color: #fff;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 20px;
@@ -590,7 +590,7 @@ p {
   border: 1px solid #ccd6f5;
   border-radius: 8px;
   padding: 6px 14px;
-  font-size: 0.9rem;         /* ↑ 0.78rem → 0.9rem */
+  font-size: 0.88rem;
   font-weight: 700;
   color: #3a57a7;
   white-space: nowrap;
@@ -602,8 +602,8 @@ p {
   background: transparent;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  width: 40px;               /* ↑ 36px → 40px */
-  height: 40px;              /* ↑ 36px → 40px */
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -619,7 +619,7 @@ p {
   background: var(--accent-soft);
 }
 
-.notif-btn i { font-size: 1.1rem; }  /* ↑ 0.95rem → 1.1rem */
+.notif-btn i { font-size: 1.1rem; }
 
 .notif-badge {
   position: absolute;
@@ -627,10 +627,10 @@ p {
   right: -5px;
   background: #ef4444;
   color: #fff;
-  font-size: 0.7rem;         /* ↑ 0.6rem → 0.7rem */
+  font-size: 0.7rem;
   font-weight: 700;
-  min-width: 18px;           /* ↑ 16px → 18px */
-  height: 18px;              /* ↑ 16px → 18px */
+  min-width: 18px;
+  height: 18px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -648,16 +648,16 @@ p {
 }
 
 .user-info strong {
-  font-size: 0.97rem;        /* ↑ 0.83rem → 0.97rem */
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
   display: block;
 }
 
 .user-info small {
-  font-size: 0.82rem;        /* ↑ 0.7rem → 0.82rem */
+  font-size: 0.80rem;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* ── Utilities ──────────────────────────────────────────────── */
@@ -697,9 +697,9 @@ p {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 4px 12px;       /* ↑ 3px 10px → 4px 12px */
+    padding: 4px 12px;
     border-radius: 20px;
-    font-size: 0.83rem;      /* ↑ 0.72rem → 0.83rem */
+    font-size: 0.80rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     white-space: nowrap;
@@ -723,11 +723,11 @@ p {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;             /* ↑ 38px → 44px */
-    height: 28px;            /* ↑ 24px → 28px */
+    width: 44px;
+    height: 28px;
     border-radius: 6px;
-    font-size: 0.87rem;      /* ↑ 0.75rem → 0.87rem */
-    font-weight: 800;
+    font-size: 0.84rem;
+    font-weight: 700;
 }
 .score-pill.critique     { background: #fde8e8; color: #c0392b; }
 .score-pill.modere       { background: #fff3e0; color: #e67e22; }

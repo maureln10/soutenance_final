@@ -20,7 +20,6 @@ h2::after {
 
 .card-body {
   padding: 16px 20px;
-  
 }
 
 .card-body form .mb-2 {
@@ -87,15 +86,27 @@ h2::after {
 .table tbody tr { transition: background 0.15s; }
 .table tbody tr:hover > * { background-color: #eff6ff !important; }
 
-
 @media (max-width: 768px) {
   .container-fluid { padding: 14px; }
   .card.text-center h4 { font-size: 1.2rem; }
   .kpi-row .col-md-2 { flex: 0 0 50%; max-width: 50%; }
 }
-.text-muted{
-  font-size:0.82rem;
-  color:#8da0b8 !important;
+.text-muted {
+  font-size: 0.82rem;
+  color: #8da0b8 !important;
+}
+
+/* Styles pour les messages d'erreur */
+.field-error {
+  font-size: 0.78rem;
+  color: #dc3545;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.is-invalid {
+  border-color: #dc3545 !important;
 }
 </style>
 
@@ -103,39 +114,68 @@ h2::after {
 <div class="container-fluid">
   <h2>Gestion des Comptes</h2>
   <p class="text-muted">Vous pouvez créer ou supprimer un utilisateur</p>
-<br>
+  <br>
+
+ 
+
   <!-- Formulaire Flask-WTF -->
-  <div class="card mb-4" style="max-width: 520px;  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;">
-    <div class="card-header"><h4 style="font-size: 0.99rem;">Créer un utilisateur</h4>
-      
+  <div class="card mb-4" style="max-width: 520px; box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;">
+    <div class="card-header">
+      <h4 style="font-size: 0.99rem;">Créer un utilisateur</h4>
     </div>
     <div class="card-body">
       <form method="POST">
         {{ form.hidden_tag() }}
         <div class="row g-2">
+
+          <!-- Nom -->
           <div class="col-6 mb-2">
             {{ form.nom.label }}
-            {{ form.nom(class="form-control") }}
+            {{ form.nom(class="form-control" + (" is-invalid" if form.nom.errors else "")) }}
+            {% for error in form.nom.errors %}
+              <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
+            {% endfor %}
           </div>
+
+          <!-- Prénom -->
           <div class="col-6 mb-2">
             {{ form.prenom.label }}
-            {{ form.prenom(class="form-control") }}
+            {{ form.prenom(class="form-control" + (" is-invalid" if form.prenom.errors else "")) }}
+            {% for error in form.prenom.errors %}
+              <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
+            {% endfor %}
           </div>
+
+          <!-- Email -->
           <div class="col-12 mb-2">
             {{ form.email.label }}
-            {{ form.email(class="form-control") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+            {% for error in form.email.errors %}
+              <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
+            {% endfor %}
           </div>
+
+          <!-- Mot de passe -->
           <div class="col-6 mb-2">
             {{ form.mot_de_passe.label }}
-            {{ form.mot_de_passe(class="form-control") }}
+            {{ form.mot_de_passe(class="form-control" + (" is-invalid" if form.mot_de_passe.errors else "")) }}
+            {% for error in form.mot_de_passe.errors %}
+              <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
+            {% endfor %}
           </div>
-        <div class="col-6 mb-2">
-  {{ form.role.label }}
-  {{ form.role(class="form-select") }}
-</div>
+
+          <!-- Rôle -->
+          <div class="col-6 mb-2">
+            {{ form.role.label }}
+            {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else "")) }}
+            {% for error in form.role.errors %}
+              <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
+            {% endfor %}
+          </div>
 
         </div>
 
+        <!-- Genre -->
         <div class="mb-2 mt-1">
           {{ form.genre.label }}<br>
           {% for subfield in form.genre %}
@@ -143,6 +183,9 @@ h2::after {
               {{ subfield(class="form-check-input") }}
               {{ subfield.label(class="form-check-label") }}
             </div>
+          {% endfor %}
+          {% for error in form.genre.errors %}
+            <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</div>
           {% endfor %}
         </div>
 
@@ -177,15 +220,15 @@ h2::after {
             <td>{{ user.email }}</td>
             <td>{{ user.role if user.role else 'N/A' }}</td>
             <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
-           <td>
-  <form method="POST" action="{{ url_for('delete_user', user_id=user.id_respo) }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-sm btn-danger"
-            onclick="return confirm('Supprimer ce compte ?')">
-      <i class="bi bi-trash"></i> Supprimer
-    </button>
-  </form>
-</td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_user', user_id=user.id_respo) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger"
+                        onclick="return confirm('Supprimer ce compte ?')">
+                  <i class="bi bi-trash"></i> Supprimer
+                </button>
+              </form>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

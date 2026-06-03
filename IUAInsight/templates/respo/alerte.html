@@ -53,10 +53,10 @@ h2::after {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  min-height: 120px;
+  min-height: 160px;
+  height: 160px;
   justify-content: center;
 }
-
 .card.text-center h4 {
   font-size: 1.4rem;
   font-weight: 800;
@@ -526,11 +526,14 @@ h2::after {
             <th>Niveau</th>
             <th>Moyenne</th>
             <th>Crédit validé</th>
-            <th>Matière échouée</th>
-            {% if semestre_selected != 'all' %}
+                  {% if semestre_selected != 'all' %}
+              <th>Matière échouée</th>
             <th>Niveau de risque</th>
-            <th>Action</th>
+           
             {% endif %}
+           
+             <th>Action</th>
+      
           </tr>
         </thead>
         <tbody>
@@ -566,7 +569,10 @@ h2::after {
                 <span class="credits-total">/{{ e.credits_requis }}</span>
               </td>
 
-              <td>
+            
+
+              {% if semestre_selected != 'all' %}
+                <td>
                 {% if e.nb_matieres > 0 %}
                   <button class="matieres-toggle" onclick="toggleMatieres(this)">
                     <i class="bi bi-chevron-right"></i>
@@ -581,8 +587,6 @@ h2::after {
                   <span class="empty-val">—</span>
                 {% endif %}
               </td>
-
-              {% if semestre_selected != 'all' %}
               <td>
                 {% set niv = 'critique' if e.score_risque >= 60
                           else 'modere'       if e.score_risque >= 35
@@ -608,12 +612,13 @@ h2::after {
                 </div>
               </td>
 
-              <td>
+             
+              {% endif %}
+               <td>
                 <a href="{{ url_for('detail_risque', matricule=e.matricule) }}" class="btn-voir">
                   <i class="bi bi-eye"></i> Détail
                 </a>
               </td>
-              {% endif %}
 
             </tr>
           {% endfor %}

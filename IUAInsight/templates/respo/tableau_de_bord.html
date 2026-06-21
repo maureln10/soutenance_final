@@ -335,17 +335,20 @@ td { font-size: 0.8rem; color: #2d4057; }
   </form>
 
   <!-- ── Macro delta ── -->
-  {% macro delta_badge(delta_val, sens, color="#8da0b8") %}
-    {% if delta_val is not none %}
-      {% set arrow = "↑" if sens == 'up' else ("↓" if sens == 'down' else "→") %}
-      <span style="font-size:0.7rem;font-weight:600;color:{{ color }};background:{{ color }}18;
-                   padding:2px 7px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;margin-top:3px">
-        {{ arrow }} {{ delta_val|abs }}%
-      </span>
-    {% else %}
-      <span style="font-size:10px;color:#c0ccd8;margin-top:3px">—</span>
-    {% endif %}
-  {% endmacro %}
+  <!-- ✅ FIX : ajout du paramètre "suffix" (défaut "%") pour ne plus afficher
+       un "%" sur le delta des inscrits, qui est un nombre absolu d'étudiants
+       et non un taux. -->
+{% macro delta_badge(delta_val, sens, color="#8da0b8", suffix="%") %}
+  {% if delta_val is not none %}
+    {% set arrow = "↑" if sens == 'up' else ("↓" if sens == 'down' else "→") %}
+    <span style="font-size:0.7rem;font-weight:600;color:{{ color }};background:{{ color }}18;
+                 padding:2px 7px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;margin-top:3px">
+      {{ arrow }} {{ delta_val|abs }}{{ suffix }}
+    </span>
+  {% else %}
+    <span style="font-size:10px;color:#c0ccd8;margin-top:3px">—</span>
+  {% endif %}
+{% endmacro %}
 
   <!-- ── KPI ── -->
   <div class="row kpi-row">
@@ -392,7 +395,8 @@ td { font-size: 0.8rem; color: #2d4057; }
           <i class="bi bi-person-plus"></i>
           <h4>{{ inscrits }}</h4>
           <p>Étudiants Inscrits</p>
-          {{ delta_badge(delta_inscrits, sens_inscrits, color="#3b82f6") }}
+          <!-- ✅ FIX : suffix=" étudiant(s)" au lieu du "%" par défaut -->
+          {{ delta_badge(delta_inscrits, sens_inscrits, color="#3b82f6", suffix=" étudiant(s)") }}
           {% if annee_precedente %}<span style="font-size:10px;color:#8da0b8">vs {{ annee_precedente.libelle }}</span>{% endif %}
         </div>
       </div>

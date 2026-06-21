@@ -2,28 +2,64 @@
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-body { font-family: 'Inter', sans-serif; background:  #f3f6fb; color: #1a2a3a; }
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background:  #f3f6fb; color: #1e2d3d; }
 h2 { font-size: 1.4rem; font-weight: 700; color: #1e2d3d; display: inline-block; margin-bottom: 4px; }
 h2::after { content: ''; display: block; width: 40px; height: 3px; background: #3b82f6; border-radius: 4px; margin-top: 6px; }
-.card-form { background: #fff; border: 1px solid #dce6f0; border-radius: 14px; box-shadow: 0 2px 12px rgba(26,95,180,.08); padding: 22px 26px; margin-bottom: 28px; }
-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing:.05em; color: #64748b; margin-bottom: 4px; display: block; }
-.form-control { font-family:'Inter',sans-serif !important; font-size:0.85rem !important; background:#f7fafd !important; border:1.5px solid #dde5f0 !important; padding:8px 12px !important; color:#1a2a3a; transition:border-color .2s; }
+
+.card-form {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11);
+  padding: 22px 26px;
+  margin-bottom: 28px;
+}
+
+label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; color: #8da0b8; margin-bottom: 4px; display: block; }
+
+.form-control {
+  font-family:'Inter',sans-serif !important;
+  font-size:0.82rem !important;
+  background:#ffffff !important;
+  border:1.5px solid #dde5f0 !important;
+  border-radius: 6px !important;
+  padding:7px 10px !important;
+  color:#1e2d3d;
+  transition:border-color .2s, box-shadow .2s;
+}
 .form-control:focus { outline:none; border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,.1) !important; background:#fff !important; }
-.form-control:disabled { background:#f1f5f9 !important; color:#94a3b8; }
-.btn-primary { background:#3b82f6 !important; border:none !important; border-radius:8px !important; font-size:0.82rem !important; font-weight:600 !important; padding:8px 20px !important; cursor:pointer; transition:background .18s; }
-.btn-primary:hover { background:#2563eb !important; }
+.form-control:disabled { background:#f1f5f9 !important; color:#8da0b8; }
+
+.btn-primary {
+  font-family:'Inter',sans-serif !important;
+  background:#3b82f6 !important;
+  border:none !important;
+  border-radius:8px !important;
+  font-size:0.78rem !important;
+  font-weight:700 !important;
+  padding:8px 18px !important;
+  cursor:pointer;
+  box-shadow: 0 2px 8px rgba(59,130,246,.25);
+  transition:background .18s, transform .12s, box-shadow .18s;
+}
+.btn-primary:hover { background:#2563eb !important; transform:translateY(-1px); box-shadow:0 4px 14px rgba(59,130,246,.35); }
 .btn-primary:disabled { background:#93c5fd !important; cursor:not-allowed !important; }
-.table { font-size:0.84rem; margin-bottom:0; }
+
+.table { font-size:0.78rem; margin-bottom:0; }
 .table thead tr { background:#1e2d3d; }
-.table thead th { color:rgba(255,255,255,.75) !important; font-size:0.72rem !important; font-weight:600 !important; text-transform:uppercase !important; letter-spacing:.07em !important; border:none !important; padding:10px 14px !important; }
-.table tbody tr:nth-child(odd)  { background:#f8fafc; }
+.table thead th { color:#ffffff !important; font-size:0.68rem !important; font-weight:700 !important; text-transform:uppercase !important; letter-spacing:.05em !important; border:none !important; padding:11px 12px !important; }
+.table tbody tr:nth-child(odd)  { background:#f7fafd; }
 .table tbody tr:nth-child(even) { background:#ffffff; }
-.table tbody tr:hover td { background:#eff6ff !important; }
-.table td { padding:10px 14px !important; vertical-align:middle; border-color:#e8eef6 !important; }
-.badge-active   { background:#dcfce7; color:#15803d; font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:20px; }
-.badge-inactive { background:#f1f5f9; color:#64748b;  font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:20px; }
-.search-bar .input-group .form-control { border:1.5px solid #dde5f0; border-right:none; border-radius:10px 0 0 10px; background:#fff; }
-.search-bar .input-group-text { background:#3b82f6; border:1.5px solid #3b82f6; border-left:none; border-radius:0 10px 10px 0; color:#fff; padding:9px 14px; }
+.table tbody tr:hover td { background:#edf4ff !important; }
+.table td { padding:10px 12px !important; vertical-align:middle; border-color:#eef2f7 !important; font-size: 0.78rem; color: #2d4057; }
+
+.badge-active   { background:#dcfce7; color:#15803d; font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; display:inline-flex; align-items:center; }
+.badge-inactive { background:#f1f5f9; color:#64748b;  font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; display:inline-flex; align-items:center; }
+
+.search-bar .input-group .form-control { border:1.5px solid #dde5f0; border-right:none; border-radius:6px 0 0 6px; background:#fff; }
+.search-bar .input-group-text { background:#3b82f6; border:1.5px solid #3b82f6; border-left:none; border-radius:0 6px 6px 0; color:#fff; padding:7px 12px; }
+
 fieldset[disabled] { opacity: 0.5; pointer-events: none; }
 </style>
 
@@ -34,9 +70,9 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
   </p>
   {% if annee_active %}
 <div id="countdown-box"
-     style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;
-            padding:5px 14px;font-size:.8rem;font-weight:600;white-space:nowrap;
-            background:#f0fdf4;border:1px solid #86efac;color:#15803d;
+     style="display:inline-flex;align-items:center;gap:6px;border-radius:20px;
+            padding:5px 14px;font-size:.72rem;font-weight:700;white-space:nowrap;
+            background:#dcfce7;border:none;color:#15803d;
             margin-bottom:16px;transition:all .3s;">
   <i class="bi bi-hourglass-top" id="countdown-icon"></i>
   <span id="countdown-text">Calcul...</span>
@@ -53,8 +89,8 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
     const diff = fin - new Date();
 
     if (diff <= 0) {
-      box.style.background = "#fdecea";
-      box.style.border     = "1px solid #f5c0bc";
+      box.style.background = "#fee2e2";
+      box.style.border     = "none";
       box.style.color      = "#b91c1c";
       icon.className       = "bi bi-check2-circle";
       txt.textContent      = "Année terminée";
@@ -67,18 +103,18 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
     const secs    = Math.floor((diff % 60000)    / 1000);
 
     if (jours <= 7) {
-      box.style.background = "#fdecea";
-      box.style.border     = "1px solid #f5c0bc";
+      box.style.background = "#fee2e2";
+      box.style.border     = "none";
       box.style.color      = "#b91c1c";
       icon.className       = "bi bi-hourglass-bottom";
     } else if (jours <= 30) {
-      box.style.background = "#fff8e6";
-      box.style.border     = "1px solid #fcd97a";
-      box.style.color      = "#9a6800";
+      box.style.background = "#fff7ed";
+      box.style.border     = "none";
+      box.style.color      = "#c2410c";
       icon.className       = "bi bi-hourglass-split";
     } else {
-      box.style.background = "#f0fdf4";
-      box.style.border     = "1px solid #86efac";
+      box.style.background = "#dcfce7";
+      box.style.border     = "none";
       box.style.color      = "#15803d";
       icon.className       = "bi bi-hourglass-top";
     }
@@ -98,17 +134,18 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
 
   {% if annee_active %}
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;
-              background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;
-              padding:12px 18px;max-width:500px">
-    <i class="bi bi-check-circle-fill" style="color:#0369a1;  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;"></i>
+              background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;
+              box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11);
+              padding:14px 18px;max-width:500px">
+    <i class="bi bi-check-circle-fill" style="color:#3b82f6;font-size:1.1rem;"></i>
     <div>
-      <span style="font-size:0.7rem;text-transform:uppercase;color:#64748b;font-weight:600;">
+      <span style="font-size:0.68rem;text-transform:uppercase;color:#8da0b8;font-weight:700;letter-spacing:.05em;">
         Année active
       </span><br>
-      <span style="font-size:0.9rem;font-weight:700;color:#0369a1;">
+      <span style="font-size:0.9rem;font-weight:700;color:#1e2d3d;">
         {{ annee_active.libelle }}
       </span>
-      <span style="font-size:0.78rem;color:#64748b;margin-left:8px">
+      <span style="font-size:0.75rem;color:#8da0b8;margin-left:8px">
         {{ annee_active.date_debut.strftime('%d/%m/%Y') }}
         → {{ annee_active.date_fin.strftime('%d/%m/%Y') }}
       </span>
@@ -125,7 +162,7 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
         <i class="bi bi-pencil-square me-1"></i> Modifier — {{ annee_edit.libelle }}
       </span>
       <a href="{{ url_for('parametrage') }}"
-         style="font-size:0.75rem;color:#64748b;text-decoration:none">
+         style="font-size:0.75rem;font-weight:500;color:#8da0b8;text-decoration:none">
         <i class="bi bi-x-circle me-1"></i> Annuler
       </a>
     </div>
@@ -157,15 +194,15 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
     {% else %}
     <!-- ── Mode création ── -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <span style="font-size:0.85rem;font-weight:700;color:#3b82f6;
-                   text-transform:uppercase;letter-spacing:.06em">
+      <span style="font-size:0.68rem;font-weight:700;color:#3b82f6;
+                   text-transform:uppercase;letter-spacing:.05em">
         <i class="bi bi-plus-circle me-1"></i> Nouvelle année
       </span>
     </div>
 
     {% if creation_bloquee %}
-    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;
-                padding:11px 14px;margin-bottom:16px;font-size:0.8rem;color:#92400e;
+    <div style="background:#fff7ed;border:none;border-radius:10px;
+                padding:11px 14px;margin-bottom:16px;font-size:0.78rem;color:#c2410c;
                 display:flex;align-items:center;gap:8px">
       <i class="bi bi-exclamation-triangle-fill" style="font-size:1rem;color:#f59e0b"></i>
       <span>
@@ -220,7 +257,8 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
     </div>
   </form>
 
-  <div style="overflow:hidden;border-radius:10px;border:1px solid #e8eef6;max-width:560px">
+  <div style="overflow:hidden;border-radius:12px;border:1px solid #e2e8f0;max-width:560px;
+              box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11);">
     <table class="table mb-0">
       <thead>
         <tr>
@@ -233,7 +271,7 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
       </thead>
       <tbody>
         {% for p in params %}
-        <tr {% if p.active %}style="background:#f0f9ff"{% endif %}>
+        <tr {% if p.active %}style="background:#eff6ff"{% endif %}>
           <td><strong>{{ p.libelle }}</strong></td>
           <td>{{ p.date_debut.strftime('%d/%m/%Y') }}</td>
           <td>{{ p.date_fin.strftime('%d/%m/%Y') }}</td>
@@ -247,13 +285,13 @@ fieldset[disabled] { opacity: 0.5; pointer-events: none; }
           <td>
             {% if p.active %}
             <a href="{{ url_for('parametrage', edit=p.id_annee) }}"
-               style="background:#e0eaff;color:#3b82f6;border:none;
-                      font-size:0.75rem;padding:4px 10px;border-radius:6px;
-                      text-decoration:none">
+               style="background:#eff6ff;color:#3b82f6;border:none;
+                      font-size:0.72rem;font-weight:700;padding:4px 11px;border-radius:8px;
+                      text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
               <i class="bi bi-pencil"></i> Modifier
             </a>
             {% else %}
-            <span style="color:#cbd5e1;font-size:0.75rem">—</span>
+            <span style="color:#cbd5e1;font-size:0.72rem">—</span>
             {% endif %}
           </td>
         </tr>

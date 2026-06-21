@@ -86,18 +86,19 @@ h2::after {
 
 .table {
   margin-bottom: 0 !important;
-  font-size: 0.85rem;
+  font-size: 0.78rem; /* ← réduit (était 0.85rem) */
 }
 
 .table thead.table-dark th {
   background: #1e2d3d !important;
   color: white !important;
-  font-size: 0.72rem;
+  font-size: 0.68rem; /* ← réduit (était 0.72rem) */
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 13px 16px;
+  letter-spacing: 0.05em;
+  padding: 11px 12px; /* ← réduit (était 13px 16px) */
   border: none !important;
+  white-space: nowrap;
 }
 
 .table tbody tr { transition: background 0.15s; }
@@ -107,18 +108,19 @@ h2::after {
 .table tbody tr:hover > *               { background: #edf4ff !important; }
 
 .table tbody td {
-  padding: 12px 16px;
+  padding: 10px 12px; /* ← réduit (était 12px 16px) */
   color: #2d4057;
   border-bottom: 1px solid #eef2f7 !important;
   vertical-align: middle;
+  font-size: 0.78rem; /* ← réduit */
 }
 
 .badge-statut {
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: 0.68rem; /* ← réduit (était 0.72rem) */
   font-weight: 700;
-  padding: 3px 11px;
+  padding: 3px 9px;
   border-radius: 20px;
   white-space: nowrap;
 }
@@ -127,13 +129,12 @@ h2::after {
 .badge-modere       { background: #fff7ed; color: #c2410c; }
 .badge-surveillance { background: #fefce8; color: #a16207; }
 
-/* Badge mode_all */
 .badge-dettes {
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: 0.68rem; /* ← réduit */
   font-weight: 700;
-  padding: 3px 11px;
+  padding: 3px 9px;
   border-radius: 20px;
   white-space: nowrap;
   background: #eff6ff;
@@ -143,11 +144,11 @@ h2::after {
 .btn-voir {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.72rem; /* ← réduit (était 0.75rem) */
   font-weight: 700;
-  padding: 5px 14px;
+  padding: 4px 11px; /* ← réduit */
   border-radius: 8px;
   border: none;
   background: #ef4444;
@@ -156,6 +157,7 @@ h2::after {
   text-decoration: none;
   transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
   box-shadow: 0 2px 8px rgba(239,68,68,.25);
+  white-space: nowrap;
 }
 .btn-voir:hover {
   background: #dc2626;
@@ -197,7 +199,7 @@ h2::after {
   .card-body canvas { max-height: 220px; }
   .m1 { flex-direction: column; max-width: 100%; }
   .table thead.table-dark th,
-  .table tbody td { padding: 10px 12px; }
+  .table tbody td { padding: 8px 10px; }
   #toast-matieres { right: 12px; width: calc(100vw - 24px); }
 }
 </style>
@@ -260,7 +262,7 @@ h2::after {
       <option value="all" {% if semestre_selected == 'all' %}selected{% endif %}>Semestres</option>
       {% for s in semestre %}
         <option value="{{ s['id_semestre'] }}"
-          {% if semestre_selected == s['id_semestre'] %}selected{% endif %}>
+          {% if semestre_selected == s['id_semestre']|string %}selected{% endif %}>
           {{ s['libelle'] }}
         </option>
       {% endfor %}
@@ -297,7 +299,7 @@ h2::after {
       <tbody>
         {% for s in stats %}
         <tr>
-          <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
+          <td style="color:#8da0b8;font-weight:700;font-size:0.72rem">{{ loop.index }}</td>
           <td>{{ s.filiere }}</td>
           <td>{{ s.matiere }}</td>
           <td>{{ s.specialite }}</td>
@@ -330,15 +332,15 @@ h2::after {
             {% else %}
               <span class="badge-statut badge-admis">✓ OK</span>
             {% endif %}
-            <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
-              <div style="width:70px; height:5px; background:#e2e8f4; border-radius:4px; overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+              <div style="width:60px; height:4px; background:#e2e8f4; border-radius:4px; overflow:hidden;">
                 <div style="width:{{ s.taux_echec }}%; height:100%; border-radius:4px;
                   background:{% if niv == 'critique' %}#ef4444
                              {% elif niv == 'modere' %}#f97316
                              {% elif niv == 'surveillance' %}#eab308
                              {% else %}#10b981{% endif %};"></div>
               </div>
-              <span style="font-size:0.75rem; font-weight:600;
+              <span style="font-size:0.72rem; font-weight:600;
                 color:{% if niv == 'critique' %}#ef4444
                       {% elif niv == 'modere' %}#f97316
                       {% elif niv == 'surveillance' %}#eab308

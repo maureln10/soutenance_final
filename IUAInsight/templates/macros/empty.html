@@ -1,0 +1,23 @@
+{% macro empty_state(semestre_selected, filiere_selected='all', niveau_selected='all', type='table') %}
+<div class="empty-state {% if type == 'chart' %}empty-chart{% endif %}">
+  {% if semestre_selected == '1' %}
+    <i class="bi bi-journal-x"></i>
+    <h3>Aucune note au Semestre 1</h3>
+    <p>Aucun résultat S1 enregistré
+      {% if filiere_selected != 'all' %}dans cette filière{% endif %}
+      {% if niveau_selected != 'all' %}pour ce niveau{% endif %}.
+    </p>
+  {% elif semestre_selected == '2' %}
+    <i class="bi bi-journal-x"></i>
+    <h3>Aucune note au Semestre 2</h3>
+    <p>Aucun résultat S2 enregistré
+      {% if filiere_selected != 'all' %}dans cette filière{% endif %}
+      {% if niveau_selected != 'all' %}pour ce niveau{% endif %}.
+    </p>
+  {% else %}
+    <i class="bi bi-inbox"></i>
+    <h3>Aucune donnée disponible</h3>
+    <p>Aucun résultat trouvé pour cette sélection.</p>
+  {% endif %}
+</div>
+{% endmacro %}

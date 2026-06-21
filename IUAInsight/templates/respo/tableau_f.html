@@ -53,8 +53,7 @@ h2::after {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  /* ✦ CORRIGÉ : double couche de shadow bien visible */
-  box-shadow: 0 2px 8px rgba(9,18,32,0.10), 0 8px 25px rgba(9,18,32,0.11) !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
@@ -62,9 +61,14 @@ h2::after {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
- .card.text-center{
+
+.card.text-center{
     box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
- }
+}
+.card.text-center:hover{
+    box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
+}
+
 /*
 .kpi-row .kpi-col:nth-child(1) .card { border-top: 4px solid #3b82f6 !important; }
 .kpi-row .kpi-col:nth-child(2) .card { border-top: 4px solid #22c55e !important; }
@@ -239,6 +243,18 @@ canvas { max-width: 100%; height: auto !important; display: block; }
 
 
   <!-- KPI -->
+  <!-- ── Macro delta : suffixe paramétrable pour éviter d'attribuer un "%"
+       à un delta qui est en réalité un effectif (nombre d'étudiants). ── -->
+  {% macro delta_chip(delta_val, sens, color, suffix="%") %}
+    {% if delta_val is not none %}
+      {% set arrow = "↑" if sens == "up" else "↓" if sens == "down" else "→" %}
+      <span style="font-size:0.7rem;font-weight:600;color:{{ color }};background:{{ color }}18;
+                   padding:2px 7px;border-radius:20px;display:inline-block">
+        {{ arrow }} {{ delta_val | abs }}{{ suffix }}
+      </span>
+    {% endif %}
+  {% endmacro %}
+
 <div class="kpi-row">
 <div class="kpi-col">
   <div class="card text-center">
@@ -254,13 +270,8 @@ canvas { max-width: 100%; height: auto !important; display: block; }
         </span>
       {% endif %}
 
-      {% if delta_total is not none %}
-        {% set arrow = "↑" if sens_total == "up" else "↓" if sens_total == "down" else "→" %}
-        <span style="font-size:0.7rem;font-weight:600;color:#3b82f6;background:#3b82f618;
-                     padding:2px 7px;border-radius:20px">
-          {{ arrow }} {{ delta_total | abs }}
-        </span>
-      {% endif %}
+      <!-- ✅ FIX : suffix=" étudiant(s)" — delta_total est un effectif, pas un % -->
+      {{ delta_chip(delta_total, sens_total, "#3b82f6", suffix=" étudiant(s)") }}
 
       {% if annee_precedente %}
         <span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>
@@ -275,12 +286,9 @@ canvas { max-width: 100%; height: auto !important; display: block; }
         <i class="bi bi-bar-chart"></i>
         <h4>{{ moyenne_generale }}/20</h4>
         <p>Moyenne Générale</p>
-     {% if delta_moyenne is not none %}
-  {% set arrow = "↑" if sens_moyenne == "up" else "↓" if sens_moyenne == "down" else "→" %}
-  <span style="font-size:0.7rem;font-weight:600;color:#22c55e;background:#38bdf818;padding:2px 7px;border-radius:20px">
-    {{ arrow }} {{ delta_moyenne | abs }}
-  </span>
-{% endif %}
+        <!-- ✅ FIX : couleur et fond du badge harmonisés (vert cohérent),
+             suffix="/20" car delta_moyenne porte sur une moyenne sur 20, pas un % -->
+        {{ delta_chip(delta_moyenne, sens_moyenne, "#22c55e", suffix="/20") }}
         {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
       </div>
     </div>
@@ -292,12 +300,7 @@ canvas { max-width: 100%; height: auto !important; display: block; }
         <i class="bi bi-x-circle"></i>
         <h4>{{ taux_echec }}%</h4>
         <p>Taux d'échec</p>
-        {% if delta_echec is not none %}
-          {% set arrow = "↑" if sens_echec == "up" else "↓" if sens_echec == "down" else "→" %}
-          <span style="font-size:0.7rem;font-weight:600;color:#ef4444;background:#ef444418;padding:2px 7px;border-radius:20px">
-            {{ arrow }} {{ delta_echec | abs }}%
-          </span>
-        {% endif %}
+        {{ delta_chip(delta_echec, sens_echec, "#ef4444") }}
         {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
       </div>
     </div>
@@ -309,12 +312,7 @@ canvas { max-width: 100%; height: auto !important; display: block; }
         <i class="bi bi-person-x"></i>
         <h4>{{ taux_e }}%</h4>
         <p>Taux d'abandon</p>
-    {% if delta_abandon is not none %}
-  {% set arrow = "↑" if sens_abandon == "up" else "↓" if sens_abandon == "down" else "→" %}
-  <span style="font-size:0.7rem;font-weight:600;color:#f59e0b;background:#f59e0b18;padding:2px 7px;border-radius:20px">
-    {{ arrow }} {{ delta_abandon | abs }}%
-  </span>
-{% endif %}
+        {{ delta_chip(delta_abandon, sens_abandon, "#f59e0b") }}
         {% if annee_precedente %}<span style="font-size:10px;color:#c0ccd8">vs {{ annee_precedente.libelle }}</span>{% endif %}
       </div>
     </div>

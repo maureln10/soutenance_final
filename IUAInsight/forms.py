@@ -90,6 +90,7 @@ class RapportForm(FlaskForm):
         choices=[
             ("Rapport de résultats", "Rapport de résultats"),
             ("Étudiants admis",      "Étudiants admis"),
+            ("Admis endettés",       "Admis endettés"),
             ("Étudiants en échec",   "Étudiants en échec"),
             ("Abandon étudiants",    "Abandon étudiants"),
         ],

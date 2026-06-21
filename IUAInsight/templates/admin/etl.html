@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -40,41 +40,41 @@ h2::after {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
 }
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.09) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
 
 .card-header {
   background: #ffffff !important;
-  border-bottom: 1px solid #e8eef6 !important;
+  border-bottom: 1.5px solid #e8eef6 !important;
   font-size: 0.9rem;
   font-weight: 700;
   color: #1e2d3d;
-  padding: 14px 20px !important;
+  padding: 16px 22px !important;
 }
 .card-body { padding: 20px !important; }
 
 /* Form labels & inputs */
 .form-label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #4a6078;
-  margin-bottom: 5px;
+  color: #1e2d3d;
+  margin-bottom: 4px;
   display: block;
 }
 .form-control {
   font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   border: 1.5px solid #dde5f0;
   border-radius: 6px;
   color: #1e2d3d;
   background: #ffffff;
-  padding: 8px 10px;
+  padding: 7px 10px;
   width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -83,13 +83,13 @@ h2::after {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59,130,246,.1);
 }
-.form-control::placeholder { color: #b0bec5; }
+.form-control::placeholder { color: #8da0b8; }
 
 /* Alert */
 .alert {
   padding: 12px 16px;
   border-radius: 10px;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -112,9 +112,9 @@ h2::after {
 /* Buttons */
 .btn {
   font-family: 'Inter', sans-serif;
-  font-size: 0.84rem;
-  font-weight: 600;
-  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 16px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
@@ -140,19 +140,20 @@ h2::after {
   background: #3b82f6;
   color: #ffffff;
   border: 1.5px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59,130,246,.25);
 }
 .btn-primary:hover {
   background: #2563eb;
-  box-shadow: 0 2px 10px rgba(59,130,246,.3);
+  box-shadow: 0 4px 14px rgba(59,130,246,.35);
 }
 
 /* Section label */
 .section-label {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #8da0b8;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   margin-bottom: 16px;
 }
 
@@ -161,14 +162,15 @@ h2::after {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  color: #4a6078;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #475569;
   background: #f1f5f9;
   border-radius: 20px;
   padding: 4px 12px;
   margin-top: 16px;
 }
-.info-badge strong { color: #1e2d3d; }
+.info-badge strong { color: #1e2d3d; font-weight: 700; }
 
 /* Grid pour les champs */
 .fields-grid {

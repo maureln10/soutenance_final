@@ -39,7 +39,6 @@ h2::after {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
-  /* ✦ CORRIGÉ : double couche de shadow bien visible */
   box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
@@ -48,7 +47,6 @@ h2::after {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(8,17,31,0.13), 0 10px 36px rgba(8,17,31,0.16) !important;
 }
-
 
 .card-header {
   background: #ffffff !important;
@@ -105,20 +103,20 @@ h2::after {
   </div>
 
   <!-- Ligne 2 -->
-<div class="row">
-  <div class="col-md-12">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header">Réussite & Échec par année</div>
-      <div class="card-body">
-        <canvas id="anneeReussiteEchecChart"></canvas>
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">Réussite & Échec par année</div>
+        <div class="card-body">
+          <canvas id="anneeReussiteEchecChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-  <!-- Ligne 3 -->
+  <!-- Ligne 3 : Filière échec -->
   <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-12">
       <div class="card shadow-sm mb-4">
         <div class="card-header">Filière avec le plus d'échec par année</div>
         <div class="card-body">
@@ -126,8 +124,11 @@ h2::after {
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="col-md-6">
+  <!-- Ligne 4 : Filière réussite -->
+  <div class="row">
+    <div class="col-md-12">
       <div class="card shadow-sm mb-4">
         <div class="card-header">Filière avec le plus de réussite par année</div>
         <div class="card-body">
@@ -136,6 +137,7 @@ h2::after {
       </div>
     </div>
   </div>
+
 </div>
 
 <!-- Données Jinja2 -->
@@ -158,14 +160,13 @@ h2::after {
 <script>
   const d = JSON.parse(document.getElementById('chart-data3').textContent);
 
-  // Palette de couleurs pour distinguer les filières
   const palette = ['#3b82f6','#22c55e','#ef4444','#f59e0b','#8b5cf6','#0ea5e9','#14b8a6','#d946ef','#64748b','#84cc16'];
 
   // ── Évolution des Inscriptions ──
   new Chart(document.getElementById('inscriptionsChart'), {
     type: 'bar',
     data: {
-      labels: d.inscriptions.annees,   // ✅ 5 dernières années
+      labels: d.inscriptions.annees,
       datasets: [{
         label: "Nombre d'étudiants",
         data: d.inscriptions.nombres,
@@ -192,40 +193,41 @@ h2::after {
     options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } } }
   });
 
-  // ── Réussite & Échec par Année (fusionnés) ──
-new Chart(document.getElementById('anneeReussiteEchecChart'), {
-  type: 'bar',
-  data: {
-    labels: d.annees,
-    datasets: [
-      {
-        label: 'Taux de réussite (%)',
-        data: d.taux_reussite_annuel,
-        backgroundColor: '#22c55e',
-        borderRadius: 6,
-        borderSkipped: false
-      },
-      {
-        label: "Taux d'échec (%)",
-        data: d.taux_echec_annuel,
-        backgroundColor: '#ef4444',
-        borderRadius: 6,
-        borderSkipped: false
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { position: 'top', align: 'end', labels: { boxWidth: 10, padding: 14 } }
+  // ── Réussite & Échec par Année ──
+  new Chart(document.getElementById('anneeReussiteEchecChart'), {
+    type: 'bar',
+    data: {
+      labels: d.annees,
+      datasets: [
+        {
+          label: 'Taux de réussite (%)',
+          data: d.taux_reussite_annuel,
+          backgroundColor: '#22c55e',
+          borderRadius: 6,
+          borderSkipped: false
+        },
+        {
+          label: "Taux d'échec (%)",
+          data: d.taux_echec_annuel,
+          backgroundColor: '#ef4444',
+          borderRadius: 6,
+          borderSkipped: false
+        }
+      ]
     },
-    scales: {
-      y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } }
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { boxWidth: 10, padding: 14 } }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } }
+      }
     }
-  }
-});
-  // ── Taux d’échec par Filière (toutes filières) ──
+  });
+
+  // ── Taux d'échec par Filière ──
   const filiereEchecDatasets = Object.keys(d.filiere_echec).map((nom, i) => ({
     label: nom,
     data: d.filiere_echec[nom],
@@ -238,7 +240,7 @@ new Chart(document.getElementById('anneeReussiteEchecChart'), {
     options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } } }
   });
 
-  // ── Taux de réussite par Filière (toutes filières) ──
+  // ── Taux de réussite par Filière ──
   const filiereReussiteDatasets = Object.keys(d.filiere_reussite).map((nom, i) => ({
     label: nom,
     data: d.filiere_reussite[nom],
@@ -251,6 +253,5 @@ new Chart(document.getElementById('anneeReussiteEchecChart'), {
     options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } } }
   });
 </script>
-
 
 {% endblock %}

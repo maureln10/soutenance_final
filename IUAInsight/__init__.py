@@ -34,9 +34,10 @@ Talisman(app,
     content_security_policy={
         'default-src': "'self'",
         'script-src':  ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
-        'style-src':   ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+        'style-src':   ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com"],
         'img-src':     ["'self'", "data:"],
-        'font-src':    ["'self'", "cdn.jsdelivr.net"],
+        'font-src':    ["'self'", "cdn.jsdelivr.net", "fonts.gstatic.com"],
+        'connect-src': ["'self'", "cdn.jsdelivr.net"],  # ← AJOUT
     }
 )
 

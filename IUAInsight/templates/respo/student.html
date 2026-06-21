@@ -160,67 +160,65 @@ h2::after {
 
 .card-body { padding: 20px !important; }
 
-.table {
-  font-size: 10px;
-  margin-bottom: 0 !important;
-  border: none !important;
+/* ── TABLEAU : polices réduites ─────────────────────────────────── */
+#studentTable,
+#studentTable td,
+#studentTable th {
+  font-size: 0.72rem !important;
 }
 
-.table > thead.table-dark > tr > th,
-.table-dark th {
+#studentTable thead th {
   background: #1e2d3d !important;
-  color: white;
-  font-size: 0.72rem !important;
+  color: white !important;
+  font-size: 0.65rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
-  padding: 12px 16px !important;
+  padding: 8px 10px !important;
   border: none !important;
 }
 
-.table tbody td {
-  padding: 12px 16px !important;
+#studentTable tbody td {
+  font-size: 0.72rem !important;
+  padding: 7px 10px !important;
   vertical-align: middle !important;
   border: none !important;
-  color: #1e2d3d;
+  color: #1e2d3d !important;
+}
+
+#studentTable tbody td:first-child {
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  color: #8da0b8 !important;
+}
+
+#studentTable tbody td:nth-child(2) {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  color: #3b82f6 !important;
 }
 
 .table-striped > tbody > tr:nth-child(odd) > *  { background-color: #f8fafc !important; }
 .table-striped > tbody > tr:nth-child(even) > * { background-color: #ffffff !important; }
-
-.table tbody tr { transition: background 0.15s; }
-.table tbody tr:hover > * { background-color: #eff6ff !important; }
-
-.table tbody td:first-child {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #8da0b8;
-}
-
-.table tbody td:nth-child(2) {
-  font-family: "Inter", sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #3b82f6;
-}
+#studentTable tbody tr:hover > * { background-color: #eff6ff !important; }
 
 .moyenne {
   font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 0.70rem !important;
   font-weight: 600;
   color: #1e2d3d;
 }
 
 .badge-statut {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 11px;
-  border-radius: 20px;
-  white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.60rem !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: 20px !important;
+  white-space: nowrap !important;
 }
+/* ── fin réduction tableau ──────────────────────────────────────── */
 
 .badge-admis    { background: #dcfce7; color: #15803d; }
 .badge-echec    { background: #fee2e2; color: #b91c1c; }
@@ -492,7 +490,7 @@ h2::after {
                 <div style="width:{{ e.score_risque }}%; height:100%; border-radius:4px;
                             background:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};"></div>
               </div>
-              <span style="font-size:0.75rem; font-weight:600;
+              <span style="font-size:0.70rem; font-weight:600;
                            color:{% if niv == 'critique' %}#ef4444{% elif niv == 'modere' %}#f59e0b{% elif niv == 'surveillance' %}#3b82f6{% else %}#10b981{% endif %};">
                 {{ e.score_risque }}%
               </span>

@@ -13,17 +13,21 @@ body {
 }
 
 .btn-back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 15px;
   text-decoration: none;
   color: #1a2332;
   font-weight: 500;
+  font-size: 0.85rem;
 }
+.btn-back:hover { opacity: 0.65; }
 
 .matiere-banner {
   background: #ffffff;
-  border-radius: 6px;
-  box-shadow: 0 2px 12px rgba(30,45,61,.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11);
   padding: 22px 26px;
   display: flex;
   align-items: flex-start;
@@ -33,7 +37,7 @@ body {
   margin-bottom: 20px;
 }
 .matiere-banner .info h3 {
-  font-size: 1.15rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #1e2d3d;
   margin-bottom: 5px;
@@ -53,16 +57,16 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 5px 13px;
-  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
   white-space: nowrap;
 }
 .chip-taux   { background: #fee2e2; color: #b91c1c; }
 .chip-nb     { background: #eff6ff; color: #1d4ed8; }
-.chip-nb-det { background: #f0fdf4; color: #15803d; }
-.chip-prof   { background: #f1f5f9; color: #475569; }
+.chip-nb-det { background: #dcfce7; color: #15803d; }
+.chip-prof   { background: #f1f5f9; color: #475569; font-weight: 600; }
 
 .actions-bar {
   display: flex;
@@ -82,7 +86,7 @@ body {
 }
 .count-label span {
   background: #eef2f7;
-  color: #64748b;
+  color: #8da0b8;
   font-size: 0.75rem;
   padding: 3px 10px;
   border-radius: 4px;
@@ -93,17 +97,19 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.78rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 8px 18px;
-  border-radius: 4px;
+  padding: 4px 11px;
+  border-radius: 8px;
+  border: none;
   background: #ef4444;
   color: #ffffff;
   text-decoration: none;
-  border: none;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(239,68,68,.25);
-  transition: all 0.18s;
+  transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+  white-space: nowrap;
 }
 .btn-pdf:hover {
   background: #dc2626;
@@ -123,20 +129,21 @@ body {
 }
 .table-responsive::-webkit-scrollbar { display: none; }
 
+/* ===== Police alignée sur le tableau "Matières avec dettes" ===== */
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   margin: 0;
 }
 .table thead.table-dark th {
-  background: #1e2d3d;
-  color: #ffffff;
-  font-size: 0.72rem;
+  background: #1e2d3d !important;
+  color: #ffffff !important;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 13px 16px;
+  letter-spacing: 0.05em;
+  padding: 11px 12px;
   border: none;
   white-space: nowrap;
 }
@@ -145,33 +152,34 @@ body {
 .table-striped tbody tr:nth-child(even) { background: #ffffff; }
 .table tbody tr:hover td               { background: #edf4ff; }
 .table tbody td {
-  padding: 12px 16px;
+  padding: 10px 12px;
   color: #2d4057;
+  font-size: 0.78rem;
   border-bottom: 1px solid #eef2f7;
   vertical-align: middle;
 }
+/* ============================================ */
 
 .badge-moyenne {
   display: inline-flex;
   align-items: center;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 3px 11px;
-  border-radius: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
 }
 .moy-faible   { background: #fee2e2; color: #b91c1c; }
 .moy-passable { background: #fff7ed; color: #c2410c; }
 
-/* Badge mode dettes */
 .badge-dettes-mode {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 20px;
-  background: #f0fdf4;
+  background: #dcfce7;
   color: #15803d;
   white-space: nowrap;
 }
@@ -180,20 +188,20 @@ body {
   .matiere-banner  { flex-direction: column; }
   .actions-bar     { flex-direction: column; align-items: flex-start; }
   .table thead.table-dark th,
-  .table tbody td  { padding: 10px 12px; }
+  .table tbody td  { padding: 8px 10px; }
 }
 </style>
 
 
 <div class="container-fluid" style="padding: 24px 28px;">
 
-  <!-- Retour -->
   <a href="{{ url_for('tableau_m', filiere=filiere_selected, niveau=niveau_selected, semestre=semestre_selected) }}"
      class="btn-back">
-    <i class="bi bi-arrow-left"></i> Retour au tableau par matière
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="stroke:currentColor;stroke-width:0.8;">
+      <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+    </svg> <strong>Retour au tableau par matière</strong>
   </a>
 
-  <!-- Bandeau matière -->
   <div class="matiere-banner">
     <div class="info">
       <h3>{{ matiere.nom_matiere }}</h3>
@@ -227,7 +235,6 @@ body {
     </div>
   </div>
 
-  <!-- Barre d'actions -->
   <div class="actions-bar">
     <div class="count-label">
       {% if mode_all %}
@@ -248,7 +255,6 @@ body {
     {% endif %}
   </div>
 
-  <!-- Table -->
   <div>
     <div class="table-responsive">
       <table class="table table-striped">
@@ -276,7 +282,7 @@ body {
         <tbody>
           {% for a in ajournes %}
           <tr>
-            <td style="color:#8da0b8;font-weight:700;font-size:0.78rem">{{ loop.index }}</td>
+            <td style="color:#8da0b8;font-weight:700;font-size:0.72rem">{{ loop.index }}</td>
             <td style="font-weight:600;">{{ a.matricule }}</td>
             <td>{{ a.nom }}</td>
             <td>{{ a.prenom }}</td>

@@ -8,6 +8,8 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from dotenv import load_dotenv
 import os
+import time  
+import logging  
 
 # ── Chargement des variables d'environnement ───────────────
 load_dotenv()
@@ -37,7 +39,7 @@ Talisman(app,
         'style-src':   ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com"],
         'img-src':     ["'self'", "data:"],
         'font-src':    ["'self'", "cdn.jsdelivr.net", "fonts.gstatic.com"],
-        'connect-src': ["'self'", "cdn.jsdelivr.net"],  # ← AJOUT
+        'connect-src': ["'self'", "cdn.jsdelivr.net"],
     }
 )
 
@@ -57,6 +59,23 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# ── Profiling des requêtes lentes ─────────────────────────
+@app.before_request
+def _start_timer():
+    from flask import g, request
+    if not request.path.startswith('/static'):
+        g._req_start = time.perf_counter()
+
+@app.after_request
+def _log_response_time(response):
+    from flask import g, request
+    start = getattr(g, '_req_start', None)
+    if start is not None:
+        ms = (time.perf_counter() - start) * 1000
+        level = logging.WARNING if ms > 500 else logging.INFO
+        app.logger.log(level, f"[PERF] {request.method} {request.path} → {ms:.0f}ms")
+    return response
+
 # ── Initialisation du Data Warehouse ───────────────────────
 from IUAInsight.Warehouse import init_dw, create_dw_tables
 init_dw(app)
@@ -72,15 +91,12 @@ from IUAInsight.models import Inscription
 
 with app.app_context():
 
-    # Entraînement ML forcé (recharge le modèle avec les features actuelles)
     result = ml_engine.auto_train_if_needed(
         lambda: Inscription.query.all(),
         force=True
     )
-    print(f"[ML BOOT] résultat : {result}")
-    print(f"[ML BOOT] status   : {ml_engine.status()}")
+  
 
-    # Premier chargement ETL si le Data Warehouse est vide
     from IUAInsight.Warehouse.models import FaitResultatEtudiant
     from IUAInsight.Warehouse.etl_pipeline import ETLPipeline
     from IUAInsight.models import AnneeScolaire

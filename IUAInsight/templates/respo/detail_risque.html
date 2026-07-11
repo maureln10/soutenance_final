@@ -16,13 +16,6 @@ body { font-family: 'Inter', sans-serif; background:  #f3f6fb; color: #1e2d3d; f
   font-size: 0.85rem;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
 h2 { font-size: 1.4rem; font-weight: 700; color: #1e2d3d; display: inline-block; }
 h2::after { content:''; display:block; width:40px; height:3px; background:#ef4444; border-radius:4px; margin-top:6px; }
 
@@ -37,7 +30,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   gap: 20px;
   margin-bottom: 20px;
   flex-wrap: wrap;
-  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.07);
 }
 .avatar {
   width: 56px; height: 56px;
@@ -46,21 +39,29 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   font-size: 1.2rem; font-weight: 700; color: #fff;
   flex-shrink: 0;
 }
-.avatar.critique    { background: linear-gradient(135deg,#ef4444,#b91c1c); }
-.avatar.modere      { background: linear-gradient(135deg,#f59e0b,#d97706); }
-.avatar.surveillance{ background: linear-gradient(135deg,#3b82f6,#2563eb); }
-.avatar.ok          { background: linear-gradient(135deg,#10b981,#059669); }
+.avatar.critique    { background: #b91c1c; }
+.avatar.modere      { background: #d97706; }
+.avatar.surveillance{ background: #2563eb; }
+.avatar.ok          { background: #059669; }
 
 .identity-info { flex: 1; min-width: 200px; }
 .identity-info h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; }
 .identity-info p  { font-size: 0.82rem; color: #8da0b8; margin: 0; font-weight: 400; }
 
+/* Score : agrandi + fond teinté pour devenir le vrai point focal de la carte */
 .score-big {
   text-align: center;
-  padding: 0 20px;
+  padding: 14px 26px;
+  border-radius: 12px;
+  min-width: 150px;
 }
+.score-big.critique     { background: #fef2f2; }
+.score-big.modere       { background: #fffbeb; }
+.score-big.surveillance { background: #eff6ff; }
+.score-big.ok           { background: #f0fdf4; }
+
 .score-big .score-val {
-  font-size: 1.4rem;
+  font-size: 2.4rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -70,6 +71,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   color: #8da0b8;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-top: 2px;
 }
 .score-big.critique .score-val    { color: #ef4444; }
 .score-big.modere .score-val      { color: #f59e0b; }
@@ -84,7 +86,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   border-radius: 20px;
   font-size: 0.72rem;
   font-weight: 700;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 .badge-risque-big.critique    { background:#fee2e2; color:#b91c1c; }
 .badge-risque-big.modere      { background:#fff7ed; color:#c2410c; }
@@ -98,7 +100,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   border: 1px solid #e2e8f0;
   margin-bottom: 18px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(8,17,31,0.08), 0 6px 24px rgba(8,17,31,0.11) !important;
+  box-shadow: 0 4px 16px rgba(8,17,31,0.07);
 }
 .section-header {
   padding: 16px 22px;
@@ -118,7 +120,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid #f1f5f9;
 }
 .facteur-item:last-child { border-bottom: none; }
@@ -128,7 +130,11 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   display: flex; align-items: center; justify-content: center;
   font-size: 0.95rem;
   flex-shrink: 0;
+  background: #f1f5f9;
+  color: #64748b;
 }
+/* seule la fraction à poids élevé garde une icône colorée — évite le "tout est rouge" */
+.facteur-icon.high { background: var(--fi-bg); color: var(--fi-color); }
 .facteur-content { flex: 1; }
 .facteur-titre { font-size: 0.82rem; font-weight: 600; margin-bottom: 3px; }
 .facteur-detail { font-size: 0.78rem; color: #64748b; font-weight: 400; }
@@ -146,12 +152,12 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f1f5f9;
   gap: 12px;
 }
 .matiere-row:last-child { border-bottom: none; }
-.matiere-nom { font-size: 0.78rem; font-weight: 400; flex: 1; }
+.matiere-nom { font-size: 0.8rem; font-weight: 500; flex: 1; }
 .matiere-moy {
   font-size: 0.72rem;
   font-weight: 700;
@@ -233,31 +239,28 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
   color: #1d4ed8;
 }
 
-/* ── Barre de progression score ── */
-.score-bar-wrap { margin: 12px 0 0 0; }
-.score-bar-track {
-  width: 100%;
-  height: 6px;
-  background: #e2e8f4;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.score-bar-fill {
-  height: 100%;
-  border-radius: 6px;
-  transition: width 0.6s ease;
-}
-.score-bar-fill.critique    { background: #ef4444; }
-.score-bar-fill.modere      { background: #f59e0b; }
-.score-bar-fill.surveillance{ background: #3b82f6; }
-.score-bar-fill.ok          { background: #10b981; }
-.score-bar-labels {
+/* ── Barre de progression crédits : plus épaisse, plus lisible ── */
+.credits-bar-wrap { margin-top: 18px; }
+.credits-bar-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.68rem;
-  color: #8da0b8;
-  margin-top: 4px;
-  font-weight: 400;
+  align-items: baseline;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.credits-bar-label .pct { font-size: 0.95rem; font-weight: 800; }
+.credits-bar-track {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.credits-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.6s ease;
 }
 
 /* ── Synthèse mini cards ── */
@@ -325,12 +328,6 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
           {% endif %}
         </span>
       </div>
-      <div class="score-bar-wrap" style="width:120px; margin:10px auto 0;">
-        <div class="score-bar-track">
-          <div class="score-bar-fill {{ risque_niv }}" style="width:{{ score_risque }}%;"></div>
-        </div>
-        <div class="score-bar-labels"><span>0</span><span>50</span><span>100</span></div>
-      </div>
     </div>
   </div>
 
@@ -344,25 +341,17 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
           <i class="bi bi-radar" style="color:#ef4444;"></i>
           Facteurs de risque détectés
         </div>
-        <div class="section-body" style="padding-top:8px; padding-bottom:8px;">
+        <div class="section-body" style="padding-top:6px; padding-bottom:6px;">
           {% for f in facteurs %}
           <div class="facteur-item">
-            <div class="facteur-icon" style="background:{{ f.bg }}; color:{{ f.couleur }};">
+            <div class="facteur-icon {% if f.poids >= 30 %}high{% endif %}"
+                 style="{% if f.poids >= 30 %}--fi-bg:{{ f.bg }}; --fi-color:{{ f.couleur }};{% endif %}">
               <i class="bi {{ f.icone }}"></i>
             </div>
             <div class="facteur-content">
               <div class="facteur-titre">{{ f.titre }}</div>
               <div class="facteur-detail">{{ f.detail }}</div>
             </div>
-            {% if f.poids > 0 %}
-            <span class="facteur-poids" style="background:{{ f.bg }}; color:{{ f.couleur }};">
-              +{{ f.poids }} pts
-            </span>
-            {% else %}
-            <span class="facteur-poids" style="background:#dcfce7; color:#15803d;">
-              ✓ OK
-            </span>
-            {% endif %}
           </div>
           {% endfor %}
         </div>
@@ -374,7 +363,7 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
           <i class="bi bi-journal-x" style="color:#f59e0b;"></i>
           Matières échouées ({{ matieres_echouees | length }})
         </div>
-        <div class="section-body" style="padding-top:8px; padding-bottom:8px;">
+        <div class="section-body" style="padding-top:6px; padding-bottom:6px;">
           {% if matieres_echouees %}
             {% for mat in matieres_echouees %}
             <div class="matiere-row">
@@ -425,13 +414,13 @@ h2::after { content:''; display:block; width:40px; height:3px; background:#ef444
           </div>
 
           <!-- Barre crédits -->
-          <div style="margin-top:16px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.78rem; font-weight:600; margin-bottom:5px; color:#1e2d3d;">
+          <div class="credits-bar-wrap">
+            <div class="credits-bar-label">
               <span>Progression crédits</span>
-              <span style="color:#8da0b8; font-weight:400;">{{ credits_val }}/{{ credits_req }} ({{ ((credits_val / credits_req) * 100) | round | int }}%)</span>
+              <span class="pct">{{ ((credits_val / credits_req) * 100) | round | int }}%</span>
             </div>
-            <div style="width:100%; height:6px; background:#e2e8f4; border-radius:6px; overflow:hidden;">
-              <div style="width:{{ ((credits_val / credits_req) * 100) | round | int }}%; height:100%; border-radius:6px;
+            <div class="credits-bar-track">
+              <div class="credits-bar-fill" style="width:{{ ((credits_val / credits_req) * 100) | round | int }}%;
                 background:{% if (credits_val / credits_req) >= 0.75 %}#10b981{% elif (credits_val / credits_req) >= 0.50 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
             </div>
           </div>

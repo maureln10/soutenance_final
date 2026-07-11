@@ -350,6 +350,16 @@ td { font-size: 0.8rem; color: #2d4057; }
   {% endif %}
 {% endmacro %}
 
+  <!-- FIX : libellés accordés au féminin quand le filtre genre = "Féminin" -->
+  {% set is_fem = genre_filter == 'Féminin' %}
+  {% set lbl_etudiants   = "Étudiantes"           if is_fem else "Étudiants" %}
+  {% set lbl_inscrits    = "Étudiantes Inscrites" if is_fem else "Étudiants Inscrits" %}
+  {% set lbl_risque      = "Étudiantes à Risques"  if is_fem else "Étudiants à Risques" %}
+  {% set lbl_admis       = "Étudiantes Admises"   if is_fem else "Étudiants Admis" %}
+  {% set lbl_echec_abs   = "Étudiantes en Échec"  if is_fem else "Étudiants en Échec" %}
+  {% set lbl_abandon_abs = "Étudiantes en Abandon" if is_fem else "Étudiants en Abandon" %}
+  {% set suffix_inscrits = " étudiante(s)"        if is_fem else " étudiant(s)" %}
+
   <!-- ── KPI ── -->
   <div class="row kpi-row">
 
@@ -394,9 +404,9 @@ td { font-size: 0.8rem; color: #2d4057; }
         <div class="card-body">
           <i class="bi bi-person-plus"></i>
           <h4>{{ inscrits }}</h4>
-          <p>Étudiants Inscrits</p>
-          <!-- ✅ FIX : suffix=" étudiant(s)" au lieu du "%" par défaut -->
-          {{ delta_badge(delta_inscrits, sens_inscrits, color="#3b82f6", suffix=" étudiant(s)") }}
+          <p>{{ lbl_inscrits }}</p>
+          <!-- ✅ FIX : suffix=" étudiant(s)"/" étudiante(s)" au lieu du "%" par défaut -->
+          {{ delta_badge(delta_inscrits, sens_inscrits, color="#3b82f6", suffix=suffix_inscrits) }}
           {% if annee_precedente %}<span style="font-size:10px;color:#8da0b8">vs {{ annee_precedente.libelle }}</span>{% endif %}
         </div>
       </div>
@@ -407,7 +417,7 @@ td { font-size: 0.8rem; color: #2d4057; }
         <div class="card-body">
           <i class="bi bi-person-exclamation"></i>
           <h4>{{ etudiants_risque }}</h4>
-          <p>Étudiants à Risque</p>
+          <p>{{ lbl_risque }}</p>
           <span style="font-size:10px;color:#8da0b8">IUADECIS - prédictions</span>
         </div>
       </div>
@@ -430,7 +440,7 @@ td { font-size: 0.8rem; color: #2d4057; }
       <div class="card-body">
         <i class="bi bi-check-circle"></i>
         <h4 style="color:#22c55e">{{ nb_admis }}</h4>
-        <p>Étudiants Admis</p>
+        <p>{{ lbl_admis }}</p>
       </div>
     </div>
   </div>
@@ -439,7 +449,7 @@ td { font-size: 0.8rem; color: #2d4057; }
       <div class="card-body">
         <i class="bi bi-x-circle"></i>
         <h4 style="color:#ef4444">{{ nb_echec_abs }}</h4>
-        <p>Étudiants en Échec</p>
+        <p>{{ lbl_echec_abs }}</p>
       </div>
     </div>
   </div>
@@ -448,7 +458,7 @@ td { font-size: 0.8rem; color: #2d4057; }
       <div class="card-body">
         <i class="bi bi-person-x"></i>
         <h4 style="color:#f59e0b">{{ nb_abandon_abs }}</h4>
-        <p>Étudiants en Abandon</p>
+        <p>{{ lbl_abandon_abs }}</p>
       </div>
     </div>
   </div>
@@ -494,7 +504,7 @@ td { font-size: 0.8rem; color: #2d4057; }
               <tr>
                 <th style="width:50px">Rang</th>
                 <th>Filière</th>
-                <th>Étudiants</th>
+                <th>{{ lbl_etudiants }}</th>
                 <th>Réussite</th>
                 <th>Taux échec</th>
                 <th>Abandon</th>
@@ -558,7 +568,7 @@ td { font-size: 0.8rem; color: #2d4057; }
             <tr>
               <th style="width:40px">Rang</th>
               <th>Filière</th>
-              <th>Étudiants</th>
+              <th>{{ lbl_etudiants }}</th>
               <th>Réussite</th>
               <th>Statut</th>
             </tr>

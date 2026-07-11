@@ -307,9 +307,16 @@ class Inscription(db.Model):
     def _credits_par_semestre(self): return self._credits_requis() // 2
 
     def _semestres_du_niveau(self):
-        if not self.niveau or not self.niveau.semestres:
-            return []
-        return sorted(self.niveau.semestres, key=lambda s: s.ordre)
+        # ── CACHE (perf) ─────────────────────────────────────────────
+        # Le tri de niveau.semestres ne change jamais au cours d'une
+        # requête HTTP : on ne le fait qu'une seule fois par instance.
+        # ────────────────────────────────────────────────────────────
+        if not hasattr(self, "_cache_semestres"):
+            if not self.niveau or not self.niveau.semestres:
+                self._cache_semestres = []
+            else:
+                self._cache_semestres = sorted(self.niveau.semestres, key=lambda s: s.ordre)
+        return self._cache_semestres
 
     def _id_semestre_1(self):
         s = self._semestres_du_niveau()
@@ -319,40 +326,72 @@ class Inscription(db.Model):
         s = self._semestres_du_niveau()
         return s[1].id_semestre if len(s) >= 2 else None
 
+    def _resultats_par_semestre(self, id_semestre):
+        # ── CACHE (perf) ─────────────────────────────────────────────
+        # statut_simple boucle plusieurs fois sur self.resultats pour un
+        # même id_semestre (a_notes, credits_apres_rattrapage, rat_s1/s2).
+        # On ne filtre qu'une fois par (instance, id_semestre).
+        # ────────────────────────────────────────────────────────────
+        if not hasattr(self, "_cache_res_par_sem"):
+            self._cache_res_par_sem = {}
+        if id_semestre not in self._cache_res_par_sem:
+            self._cache_res_par_sem[id_semestre] = [
+                r for r in self.resultats if r.id_semestre == id_semestre
+            ]
+        return self._cache_res_par_sem[id_semestre]
+
     def _a_notes_s1(self):
         id_s1 = self._id_semestre_1()
-        return id_s1 is not None and any(r.moyenne is not None for r in self.resultats if r.id_semestre == id_s1)
+        return id_s1 is not None and any(
+            r.moyenne is not None for r in self._resultats_par_semestre(id_s1)
+        )
 
     def _a_notes_s2(self):
         id_s2 = self._id_semestre_2()
-        return id_s2 is not None and any(r.moyenne is not None for r in self.resultats if r.id_semestre == id_s2)
+        return id_s2 is not None and any(
+            r.moyenne is not None for r in self._resultats_par_semestre(id_s2)
+        )
 
     def _credits_s1_apres_rattrapage(self):
         id_s1 = self._id_semestre_1()
         if id_s1 is None: return 0
-        credits = sum(r.matiere.credit for r in self.resultats if r.credit_valide and r.matiere and r.id_semestre == id_s1)
+        res = self._resultats_par_semestre(id_s1)
+        credits = sum(r.matiere.credit for r in res if r.credit_valide and r.matiere)
         seuil = self._credits_par_semestre()
-        rat = any(r.moyenne_rattrapage is not None for r in self.resultats if r.id_semestre == id_s1)
+        rat = any(r.moyenne_rattrapage is not None for r in res)
         return seuil if rat and credits >= seuil else credits
 
     def _credits_s2_apres_rattrapage(self):
         id_s2 = self._id_semestre_2()
         if id_s2 is None: return 0
-        credits = sum(r.matiere.credit for r in self.resultats if r.credit_valide and r.matiere and r.id_semestre == id_s2)
+        res = self._resultats_par_semestre(id_s2)
+        credits = sum(r.matiere.credit for r in res if r.credit_valide and r.matiere)
         seuil = self._credits_par_semestre()
-        rat = any(r.moyenne_rattrapage is not None for r in self.resultats if r.id_semestre == id_s2)
+        rat = any(r.moyenne_rattrapage is not None for r in res)
         return seuil if rat and credits >= seuil else credits
 
     # ── Statut ───────────────────────────────────────────────────
 
     @property
     def statut_simple(self):
+        # ── CACHE (perf) ─────────────────────────────────────────────
+        # statut_simple était appelée jusqu'à 4-5 fois par inscription
+        # dans certaines routes (/student, /tableau_sp), chaque appel
+        # refaisant ~6 tris + ~8 boucles sur resultats. On calcule une
+        # seule fois par instance et on réutilise le résultat.
+        # Invalidé automatiquement via invalider_cache_statut() après
+        # toute modification des résultats (voir recalculer_tout()).
+        # ────────────────────────────────────────────────────────────
+        if hasattr(self, "_cache_statut"):
+            return self._cache_statut
+
         a_s1 = self._a_notes_s1()
         a_s2 = self._a_notes_s2()
 
         # Abandon : aucune note
         if not a_s1 and not a_s2:
-            return "Abandon"
+            self._cache_statut = "Abandon"
+            return self._cache_statut
 
         seuil_sem   = self._credits_par_semestre()  # 30
         seuil_total = self._credits_requis()         # 60
@@ -361,16 +400,17 @@ class Inscription(db.Model):
         credits_s1 = self._credits_s1_apres_rattrapage() if a_s1 else 0
         credits_s2 = self._credits_s2_apres_rattrapage() if a_s2 else 0
 
+        id_s1 = self._id_semestre_1()
+        id_s2 = self._id_semestre_2()
+
         # Vérifie si rattrapage a eu lieu
         rat_s1 = a_s1 and any(
             r.moyenne_rattrapage is not None
-            for r in self.resultats
-            if r.id_semestre == self._id_semestre_1()
+            for r in self._resultats_par_semestre(id_s1)
         )
         rat_s2 = a_s2 and any(
             r.moyenne_rattrapage is not None
-            for r in self.resultats
-            if r.id_semestre == self._id_semestre_2()
+            for r in self._resultats_par_semestre(id_s2)
         )
 
         # Ajourné = crédits insuffisants
@@ -384,41 +424,63 @@ class Inscription(db.Model):
 
             # Admis : crédits complets
             if total >= seuil_total:
-                return "Admis"
+                resultat = "Admis"
 
             # Admis avec dettes : passe au niveau suivant mais doit rattraper
-            if total >= seuil_admis:
-                return "Admis (dettes)"
+            elif total >= seuil_admis:
+                resultat = "Admis (dettes)"
 
             # Crédits < 47
-            if self.est_redoublant:
-                return "Redoublant"
+            elif self.est_redoublant:
+                resultat = "Redoublant"
 
             # Ajourné selon semestre insuffisant
-            if s1_insuf and s2_insuf: return "Ajourné S1 & S2"
-            if s1_insuf:              return "Ajourné S1"
-            if s2_insuf:              return "Ajourné S2"
-            return "Ajourné S1 & S2"
+            elif s1_insuf and s2_insuf:
+                resultat = "Ajourné S1 & S2"
+            elif s1_insuf:
+                resultat = "Ajourné S1"
+            elif s2_insuf:
+                resultat = "Ajourné S2"
+            else:
+                resultat = "Ajourné S1 & S2"
 
         # ── S1 seulement (année en cours) ────────────────────────────
-        if a_s1 and self.moyenne_s1 is not None:
+        elif a_s1 and self.moyenne_s1 is not None:
             # Rattrapage S1 passé et toujours insuffisant
             if rat_s1 and s1_insuf:
-                return "Ajourné S1"
-            if s1_insuf:
-                return "Ajourné S1"
-            return "En cours"
+                resultat = "Ajourné S1"
+            elif s1_insuf:
+                resultat = "Ajourné S1"
+            else:
+                resultat = "En cours"
 
         # ── S2 seulement ─────────────────────────────────────────────
-        if a_s2 and self.moyenne_s2 is not None:
+        elif a_s2 and self.moyenne_s2 is not None:
             # Rattrapage S2 passé et toujours insuffisant
             if rat_s2 and s2_insuf:
-                return "Ajourné S2"
-            if s2_insuf:
-                return "Ajourné S2"
-            return "En cours"
+                resultat = "Ajourné S2"
+            elif s2_insuf:
+                resultat = "Ajourné S2"
+            else:
+                resultat = "En cours"
 
-        return "En cours"
+        else:
+            resultat = "En cours"
+
+        self._cache_statut = resultat
+        return self._cache_statut
+
+    def invalider_cache_statut(self):
+        """
+        À appeler après toute modification des résultats/notes de cette
+        inscription (import de notes, saisie manuelle, rattrapage, etc.)
+        si statut_simple doit être relu dans la MÊME requête HTTP après
+        la modification. Entre deux requêtes HTTP, le cache est de toute
+        façon repartis à zéro (nouvelle instance ORM à chaque requête).
+        """
+        for attr in ("_cache_statut", "_cache_semestres", "_cache_res_par_sem"):
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     @property
     def statut_passage(self):
@@ -477,6 +539,10 @@ class Inscription(db.Model):
         self.recalculer_credits()
         self.recalculer_moyenne_annuelle()
         self._calculer_mention()
+        # ── Important : les résultats viennent de changer, on invalide
+        #    le cache de statut_simple pour que la suite de la requête
+        #    (ex: creer_ou_maj_dette juste après) voie le bon statut.
+        self.invalider_cache_statut()
 
     def __repr__(self):
         return f"<Inscription {self.id_inscription} - {self.statut_simple}>"

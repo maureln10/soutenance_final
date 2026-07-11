@@ -89,6 +89,18 @@
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59,130,246,.1);
     }
+    .badge-taux {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem !important;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+    }
+    .badge-taux.vert  { background: #dcfce7; color: #15803d; border-color: #86efac; }
+    .badge-taux.jaune { background: #fef3c7; color: #a16207; border-color: #fde68a; }
+    .badge-taux.rouge { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
     </style>
     
     <br>
@@ -170,12 +182,12 @@
           {% endif %}
 
           <td>
-            <span class="badge" style="font-size:0.65rem !important; background:{% if row.taux_reussite >= 60 %}#22c55e{% elif row.taux_reussite >= 50 %}#f59e0b{% else %}#ef4444{% endif %}">
+            <span class="badge-taux {% if row.taux_reussite >= 60 %}vert{% elif row.taux_reussite >= 50 %}jaune{% else %}rouge{% endif %}">
               {{ row.taux_reussite }}%
             </span>
           </td>
           <td>
-            <span class="badge" style="font-size:0.65rem !important; background:{% if row.taux_echec >= 40 %}#ef4444{% elif row.taux_echec >= 25 %}#f59e0b{% else %}#22c55e{% endif %}">
+            <span class="badge-taux {% if row.taux_echec >= 40 %}rouge{% elif row.taux_echec >= 25 %}jaune{% else %}vert{% endif %}">
               {{ row.taux_echec }}%
             </span>
           </td>

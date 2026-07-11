@@ -105,7 +105,6 @@ def unauthorized(e):
 # CONTEXT PROCESSOR
 # ==========================
 @app.context_processor
-@app.context_processor
 def inject_globals():
     nb_alertes   = 0
     annee_active = None
@@ -124,7 +123,8 @@ def inject_globals():
             nb_alertes = 0
 
     return dict(nb_alertes=nb_alertes, annee_active=annee_active,
-                layout=layout, alertes_dropdown=alertes_dropdown)
+                layout=layout, alertes_dropdown=alertes_dropdown,
+                today=date.today())
 
 
 # ==========================
@@ -135,6 +135,16 @@ def get_annee_active():
     if not annee:
         annee = AnneeScolaire.query.order_by(AnneeScolaire.id_annee.desc()).first()
     return annee
+
+
+def _annee_est_terminee(annee):
+    """
+    True si l'année scolaire donnée a dépassé sa date de fin.
+    Fonction centrale : toute la logique "année terminée" de l'appli
+    (badge du layout, message de paramétrage, blocage de création)
+    doit passer par ici pour rester cohérente.
+    """
+    return bool(annee and annee.date_fin and annee.date_fin < date.today())
 
 
 def get_semestres():
@@ -176,6 +186,34 @@ def appliquer_filtre_semestre(query, semestre_selected):
     return query
 
 
+# ── PATCH PERF ───────────────────────────────────────────────────────────
+# Équivalent Python de appliquer_filtre_semestre(), mais opère sur une
+# liste d'inscriptions déjà chargée en mémoire (avec resultats.semestre déjà
+# eager-loadés par _query_inscriptions_avec_relations) au lieu de relancer
+# une requête SQL complète avec tous les joinedload/selectinload.
+#
+# Utilisée dans tableau_de_bord() et tableau_f() pour éviter de charger
+# deux fois la même hydration ORM lourde (c'était la cause principale des
+# temps de réponse de plusieurs secondes sur ces deux pages).
+# ───────────────────────────────────────────────────────────────────────
+def _garde_semestre_python(inscription, semestre_selected):
+    """
+    Retourne True si l'inscription doit être conservée pour le filtre de
+    semestre demandé ("all", "1" ou "2"), en se basant uniquement sur les
+    objets déjà en mémoire (inscription.resultats + resultat.semestre).
+    """
+    if semestre_selected not in ("1", "2"):
+        return True
+    try:
+        parite = int(semestre_selected) % 2
+    except ValueError:
+        return True
+    return any(
+        r.semestre is not None and r.semestre.ordre % 2 == parite
+        for r in inscription.resultats
+    )
+
+
 def upsert_alerte(type_alerte, msg):
     existante = Alerte.query.filter_by(type_alerte=type_alerte).first()
     if existante:
@@ -192,7 +230,16 @@ def upsert_alerte(type_alerte, msg):
 
 
 def delete_alerte(type_alerte):
-    Alerte.query.filter_by(type_alerte=type_alerte).delete()
+    Alerte.query.filter_by(type_alerte=type_alerte).delete(synchronize_session=False)
+
+
+def _parse_int(value):
+    """Convertit `value` en int, ou retourne None si invalide/absent.
+    Centralise un pattern répété partout dans le fichier (`try: int(...) except ValueError: pass`)."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ==========================
@@ -252,9 +299,18 @@ def ml_badge_abandon(ml_result):
 def score_ml_to_int(ml_result):
     if not ml_result:
         return 0
-    MAP = {"critique": 80, "modere": 50, "surveillance": 25, "ok": 5}
-    return MAP.get(ml_result.get("niveau_risque", "ok"), 0)
 
+    POIDS = {"critique": 80, "modere": 50, "surveillance": 25, "ok": 5}
+
+    # ── Cas ML : pondération par les vraies probas du RandomForest ──────
+    if ml_result.get("source") == "ml":
+        probas = ml_result.get("probas_risque") or {}
+        if probas:
+            score = sum(probas.get(cls, 0.0) * poids for cls, poids in POIDS.items())
+            return round(score)
+
+    # ── Fallback heuristique (probas incomplètes) : palier fixe ─────────
+    return POIDS.get(ml_result.get("niveau_risque", "ok"), 0)
 
 # ==========================
 # MOTEUR DE SCORE HEURISTIQUE (fallback)
@@ -367,7 +423,13 @@ def tableau_de_bord():
     inscriptions_toutes = base_query.all()
     inscrits = len(inscriptions_toutes)
 
-    inscriptions = appliquer_filtre_semestre(base_query, semestre_filter).all()
+    # ── PATCH PERF : filtrage en Python au lieu d'une 2e requête ORM ────
+    # (avant : inscriptions = appliquer_filtre_semestre(base_query, semestre_filter).all()
+    #  → relançait une hydration ORM complète identique à inscriptions_toutes)
+    inscriptions = [
+        i for i in inscriptions_toutes
+        if _garde_semestre_python(i, semestre_filter)
+    ]
 
     if semestre_filter == "1":
         moyennes = [i.moyenne_s1 for i in inscriptions if i.moyenne_s1 is not None]
@@ -409,32 +471,29 @@ def tableau_de_bord():
         if ml_r["niveau_risque"] in ("critique", "modere"):
             ml_critiques_par_filiere[fid] += 1
 
+    # ✅ FIX : la colonne de moyenne utilisée pour le calcul réussite/échec/abandon
+    #          par filière doit suivre le semestre sélectionné, exactement comme
+    #          pour les KPI du haut. Avant, elle était figée sur moyenne_annuelle,
+    #          donc les graphiques du bas (bar, pie, top/flop, distribution,
+    #          évolution) ne réagissaient pas au changement de semestre.
+    if semestre_filter == "1":
+        moy_col_agg = Inscription.moyenne_s1
+    elif semestre_filter == "2":
+        moy_col_agg = Inscription.moyenne_s2
+    else:
+        moy_col_agg = Inscription.moyenne_annuelle
+
     filiere_agg_q = db.session.query(
         Inscription.id_filiere,
         func.count(Inscription.id_inscription).label("total"),
-        func.sum(case((Inscription.moyenne_annuelle >= 10, 1), else_=0)).label("reussis"),
-        func.sum(case((Inscription.moyenne_annuelle <  10, 1), else_=0)).label("echecs"),
-        func.sum(case((
-            Inscription.moyenne_s1.is_(None) if semestre_filter == "1" else (
-            Inscription.moyenne_s2.is_(None) if semestre_filter == "2" else
-            and_(Inscription.moyenne_s1.is_(None), Inscription.moyenne_s2.is_(None))
-            ), 1
-        ), else_=0)).label("abandons"),
+        func.sum(case((moy_col_agg >= 10, 1), else_=0)).label("reussis"),
+        func.sum(case((moy_col_agg <  10, 1), else_=0)).label("echecs"),
+        func.sum(case((moy_col_agg.is_(None), 1), else_=0)).label("abandons"),
     ).join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)
 
     if annee_active:
         filiere_agg_q = filiere_agg_q.filter(Inscription.id_annee == annee_active.id_annee)
     filiere_agg_q = appliquer_filtre_genre(filiere_agg_q, genre_filter)
-
-    if semestre_filter in ("1", "2"):
-        try:
-            sem = int(semestre_filter)
-            sous_requete = db.session.query(Resultat.id_inscription)\
-                .filter(Resultat.id_semestre == sem)\
-                .scalar_subquery()
-            filiere_agg_q = filiere_agg_q.filter(Inscription.id_inscription.in_(sous_requete))
-        except ValueError:
-            pass
 
     filiere_agg = filiere_agg_q.group_by(Inscription.id_filiere).all()
 
@@ -573,7 +632,11 @@ def tableau_de_bord():
             f"({nb_critiques_ml} critiques · {nb_moderes_ml} modérés) · "
             f"{nb_abandons_ml} à fort risque d'abandon")
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Erreur commit alertes tableau_de_bord : %s", e)
 
     now_str  = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     alertes  = [
@@ -632,13 +695,12 @@ def tableau_sp():
     query = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
     )
-    try:
-        if filiere_selected != "all":
-            query = query.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            query = query.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
+    if fid_filtre is not None:
+        query = query.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        query = query.filter(Inscription.id_niveau == nid_filtre)
     inscriptions = query.all()
 
     ml_results         = predict_batch(inscriptions)
@@ -646,8 +708,8 @@ def tableau_sp():
 
     groupes = []
     if filiere_selected != "all":
-        try:
-            fid = int(filiere_selected)
+        fid = _parse_int(filiere_selected)
+        if fid is not None:
             sps = [s for s in specialites if s.id_filiere == fid]
             filiere_obj = next((f for f in filieres if f.id_filiere == fid), None)
             if sps:
@@ -666,8 +728,6 @@ def tableau_sp():
                     "id_specialite": None,
                     "id_filiere":    fid,
                 })
-        except ValueError:
-            pass
     else:
         for sp in specialites:
             groupes.append({"label": sp.nom_specialite, "id_specialite": sp.id_specialite, "id_filiere": None})
@@ -690,11 +750,8 @@ def tableau_sp():
             insc_grp = [i for i in inscriptions if i.id_specialite is None]
 
         niveaux_a_afficher = niveaux
-        if niveau_selected != "all":
-            try:
-                niveaux_a_afficher = [n for n in niveaux if n.id_niveau == int(niveau_selected)]
-            except ValueError:
-                pass
+        if niveau_selected != "all" and nid_filtre is not None:
+            niveaux_a_afficher = [n for n in niveaux if n.id_niveau == nid_filtre]
 
         stats_niveaux = []
         for niv in niveaux_a_afficher:
@@ -791,21 +848,28 @@ def tableau_f():
     niveaux   = Niveau.query.order_by(Niveau.libelle).all()
     semestres = get_semestres()
 
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
+
     query_total = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
     ).join(Filiere).join(Niveau)
-    try:
-        if filiere_selected and filiere_selected != "all":
-            query_total = query_total.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected and niveau_selected != "all":
-            query_total = query_total.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        query_total = query_total.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        query_total = query_total.filter(Inscription.id_niveau == nid_filtre)
 
     ins_all      = query_total.all()
     total        = len(ins_all)
-    query        = appliquer_filtre_semestre(query_total, semestre_selected)
-    inscriptions = query.all()
+
+    # ── PATCH PERF : filtrage en Python au lieu d'une 2e requête ORM ────
+    # (avant : query = appliquer_filtre_semestre(query_total, semestre_selected)
+    #          inscriptions = query.all()
+    #  → relançait une hydration ORM complète identique à ins_all)
+    inscriptions = [
+        i for i in ins_all
+        if _garde_semestre_python(i, semestre_selected)
+    ]
     total_actifs = len(inscriptions)
 
     if semestre_selected == "1":
@@ -854,13 +918,10 @@ def tableau_f():
     )
     if annee_active:
         agg_niveaux_q = agg_niveaux_q.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            agg_niveaux_q = agg_niveaux_q.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            agg_niveaux_q = agg_niveaux_q.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        agg_niveaux_q = agg_niveaux_q.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        agg_niveaux_q = agg_niveaux_q.filter(Inscription.id_niveau == nid_filtre)
     agg_niveaux = agg_niveaux_q.group_by(Inscription.id_niveau).all()
 
     niveaux_map         = {n.id_niveau: n.libelle for n in niveaux}
@@ -877,12 +938,8 @@ def tableau_f():
     annees = AnneeScolaire.query.order_by(AnneeScolaire.libelle).limit(5).all()
 
     filieres_graphique = filieres
-    if filiere_selected != "all":
-        try:
-            fid = int(filiere_selected)
-            filieres_graphique = [f for f in filieres if f.id_filiere == fid]
-        except ValueError:
-            pass
+    if fid_filtre is not None:
+        filieres_graphique = [f for f in filieres if f.id_filiere == fid_filtre]
 
     annee_ids_graph    = [a.id_annee for a in annees]
     filieres_ids_graph = [f.id_filiere for f in filieres_graphique]
@@ -896,11 +953,8 @@ def tableau_f():
         Inscription.id_filiere.in_(filieres_ids_graph),
         Inscription.id_annee.in_(annee_ids_graph),
     )
-    if niveau_selected != "all":
-        try:
-            agg_evo_q = agg_evo_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+    if nid_filtre is not None:
+        agg_evo_q = agg_evo_q.filter(Inscription.id_niveau == nid_filtre)
     agg_evo = agg_evo_q.group_by(Inscription.id_filiere, Inscription.id_annee).all()
     evo_index = {(r.id_filiere, r.id_annee): r for r in agg_evo}
 
@@ -924,13 +978,10 @@ def tableau_f():
 
     def calc_stats_annee_f(id_annee):
         filters = [Inscription.id_annee == id_annee]
-        try:
-            if filiere_selected != "all":
-                filters.append(Inscription.id_filiere == int(filiere_selected))
-            if niveau_selected != "all":
-                filters.append(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+        if fid_filtre is not None:
+            filters.append(Inscription.id_filiere == fid_filtre)
+        if nid_filtre is not None:
+            filters.append(Inscription.id_niveau == nid_filtre)
 
         total_p = int(db.session.query(func.count(Inscription.id_inscription))
                       .filter(*filters).scalar() or 0)
@@ -1045,6 +1096,9 @@ def tableau_m():
     niveaux   = Niveau.query.order_by(Niveau.libelle).all()
     semestres = get_semestres()
 
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
+
     # IDs réels de semestre correspondant à la parité choisie ("1" ou "2"),
     # ou None si "all"
     semestre_ids = get_semestre_ids_pour_parite(semestre_selected)
@@ -1058,15 +1112,10 @@ def tableau_m():
     )
     if annee_active:
         base_query = base_query.filter(Inscription.id_annee == annee_active.id_annee)
-
-    try:
-        if filiere_selected != "all":
-            base_query = base_query.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            base_query = base_query.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
-
+    if fid_filtre is not None:
+        base_query = base_query.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        base_query = base_query.filter(Inscription.id_niveau == nid_filtre)
     if semestre_ids is not None:
         base_query = base_query.filter(Resultat.id_semestre.in_(semestre_ids))
 
@@ -1082,11 +1131,8 @@ def tableau_m():
         )
         if annee_active:
             subq = subq.filter(Inscription.id_annee == annee_active.id_annee)
-        try:
-            if niveau_selected != "all":
-                subq = subq.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+        if nid_filtre is not None:
+            subq = subq.filter(Inscription.id_niveau == nid_filtre)
         if semestre_ids is not None:
             subq = subq.filter(Resultat.id_semestre.in_(semestre_ids))
         subq = subq.group_by(
@@ -1156,13 +1202,10 @@ def tableau_m():
     )
     if annee_active:
         niveau_query = niveau_query.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            niveau_query = niveau_query.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            niveau_query = niveau_query.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        niveau_query = niveau_query.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        niveau_query = niveau_query.filter(Inscription.id_niveau == nid_filtre)
     if semestre_ids is not None:
         niveau_query = niveau_query.filter(Resultat.id_semestre.in_(semestre_ids))
     niveaux_par_matiere = {}
@@ -1177,13 +1220,10 @@ def tableau_m():
     )
     if annee_active:
         specialite_query = specialite_query.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            specialite_query = specialite_query.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            specialite_query = specialite_query.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        specialite_query = specialite_query.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        specialite_query = specialite_query.filter(Inscription.id_niveau == nid_filtre)
     if semestre_ids is not None:
         specialite_query = specialite_query.filter(Resultat.id_semestre.in_(semestre_ids))
     specialites_par_matiere = {}
@@ -1194,13 +1234,10 @@ def tableau_m():
         insc_q = _query_inscriptions_avec_relations(
             annee_id=annee_active.id_annee if annee_active else None
         )
-        try:
-            if filiere_selected != "all":
-                insc_q = insc_q.filter(Inscription.id_filiere == int(filiere_selected))
-            if niveau_selected != "all":
-                insc_q = insc_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+        if fid_filtre is not None:
+            insc_q = insc_q.filter(Inscription.id_filiere == fid_filtre)
+        if nid_filtre is not None:
+            insc_q = insc_q.filter(Inscription.id_niveau == nid_filtre)
         toutes_insc = insc_q.all()
 
         ajournes_par_matiere = {}
@@ -1292,9 +1329,6 @@ def tableau_m():
 # ==========================
 # AJOURNÉS PAR MATIÈRE
 # ==========================
-# ==========================
-# AJOURNÉS PAR MATIÈRE
-# ==========================
 @app.route('/ajournes_matiere/<int:id_matiere>')
 @respo_required
 def ajournes_matiere(id_matiere):
@@ -1303,6 +1337,9 @@ def ajournes_matiere(id_matiere):
     filiere_selected  = request.args.get("filiere",  "all")
     semestre_selected = request.args.get("semestre", "all")
     niveau_selected   = request.args.get("niveau",   "all")
+
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
 
     matiere = (
         Matiere.query
@@ -1314,13 +1351,10 @@ def ajournes_matiere(id_matiere):
         insc_q = _query_inscriptions_avec_relations(
             annee_id=annee_active.id_annee if annee_active else None
         )
-        try:
-            if filiere_selected != "all":
-                insc_q = insc_q.filter(Inscription.id_filiere == int(filiere_selected))
-            if niveau_selected != "all":
-                insc_q = insc_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+        if fid_filtre is not None:
+            insc_q = insc_q.filter(Inscription.id_filiere == fid_filtre)
+        if nid_filtre is not None:
+            insc_q = insc_q.filter(Inscription.id_niveau == nid_filtre)
 
         ajournes = []
         for insc in insc_q.all():
@@ -1361,13 +1395,10 @@ def ajournes_matiere(id_matiere):
         )
         if annee_active:
             q = q.filter(Inscription.id_annee == annee_active.id_annee)
-        try:
-            if filiere_selected != "all":
-                q = q.filter(Inscription.id_filiere == int(filiere_selected))
-            if niveau_selected != "all":
-                q = q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError:
-            pass
+        if fid_filtre is not None:
+            q = q.filter(Inscription.id_filiere == fid_filtre)
+        if nid_filtre is not None:
+            q = q.filter(Inscription.id_niveau == nid_filtre)
         if semestre_ids is not None:
             q = q.filter(Resultat.id_semestre.in_(semestre_ids))
 
@@ -1414,6 +1445,9 @@ def ajournes_matiere_pdf(id_matiere):
     semestre_selected = request.args.get("semestre", "all")
     niveau_selected   = request.args.get("niveau",   "all")
 
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
+
     matiere = (
         Matiere.query
         .options(joinedload(Matiere.professeur), joinedload(Matiere.filiere))
@@ -1439,13 +1473,10 @@ def ajournes_matiere_pdf(id_matiere):
 
     if annee_active:
         q = q.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            q = q.filter(Inscription.id_filiere == int(filiere_selected))
-        if niveau_selected != "all":
-            q = q.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        q = q.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None:
+        q = q.filter(Inscription.id_niveau == nid_filtre)
     if semestre_ids is not None:
         q = q.filter(Resultat.id_semestre.in_(semestre_ids))
 
@@ -1555,6 +1586,10 @@ def analyse_demo():
     specialite_selected = request.args.get("specialite", "all")
     niveau_selected     = request.args.get("niveau",     "all")
 
+    fid_filtre = _parse_int(filiere_selected)    if filiere_selected    != "all" else None
+    sid_filtre = _parse_int(specialite_selected) if specialite_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)     if niveau_selected     != "all" else None
+
     inscrits_q = (
         db.session.query(Etudiant)
         .join(Inscription)
@@ -1562,15 +1597,12 @@ def analyse_demo():
     )
     if annee_active:
         inscrits_q = inscrits_q.filter(Inscription.id_annee == annee_active.id_annee)
-    try:
-        if filiere_selected != "all":
-            inscrits_q = inscrits_q.filter(Inscription.id_filiere == int(filiere_selected))
-        if specialite_selected != "all":
-            inscrits_q = inscrits_q.filter(Inscription.id_specialite == int(specialite_selected))
-        if niveau_selected != "all":
-            inscrits_q = inscrits_q.filter(Inscription.id_niveau == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None:
+        inscrits_q = inscrits_q.filter(Inscription.id_filiere == fid_filtre)
+    if sid_filtre is not None:
+        inscrits_q = inscrits_q.filter(Inscription.id_specialite == sid_filtre)
+    if nid_filtre is not None:
+        inscrits_q = inscrits_q.filter(Inscription.id_niveau == nid_filtre)
     etudiants = inscrits_q.distinct().all()
 
     femmes = sum(1 for e in etudiants if e.genre in ("Féminin", "F"))
@@ -1688,6 +1720,9 @@ def rapport():
             if niveau_nom != "Tous":
                 q = q.filter(Niveau.libelle == niveau_nom)
             return q
+
+        total = 0  # ✅ FIX : évite un NameError si "Abandon étudiants" est atteint
+                   #          sans passer par une branche qui définissait déjà `total`
 
         if type_rapport == "Rapport de résultats":
             q = base_q()
@@ -1993,17 +2028,23 @@ def rapport():
             ws.freeze_panes = f"A{H_ROW + 1}"
             wb.save(filepath)
 
-        rapport_obj = Rapport(
-            titre   = type_rapport,
-            details = f"{periode} · {filiere_nom} · {niveau_nom}",
-            date    = datetime.now(timezone.utc),
-            format  = format_rapport,
-            path    = filename,
-        )
-        db.session.add(rapport_obj)
-        if type_rapport == "Abandon étudiants" and total > 0:
-            upsert_alerte("rapport_abandon", f"Rapport abandon : {total} étudiant(s) · {periode}")
-        db.session.commit()
+        try:
+            rapport_obj = Rapport(
+                titre   = type_rapport,
+                details = f"{periode} · {filiere_nom} · {niveau_nom}",
+                date    = datetime.now(timezone.utc),
+                format  = format_rapport,
+                path    = filename,
+            )
+            db.session.add(rapport_obj)
+            if type_rapport == "Abandon étudiants" and total > 0:
+                upsert_alerte("rapport_abandon", f"Rapport abandon : {total} étudiant(s) · {periode}")
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Erreur enregistrement rapport %s : %s", filename, e)
+            flash("Le fichier a été généré mais son historique n'a pas pu être enregistré.", "warning")
+
         return redirect(url_for('rapport', dl=filename))
 
     rapports = Rapport.query.order_by(Rapport.date.desc()).limit(10).all()
@@ -2022,8 +2063,9 @@ def rapport_delete(rapport_id):
     try:
         db.session.delete(rapport); db.session.commit()
         flash("Rapport supprimé avec succès.", "success")
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        logger.error("Erreur suppression rapport %s : %s", rapport_id, e)
         flash("Erreur lors de la suppression du rapport.", "danger")
     return redirect(url_for("rapport"))
 
@@ -2032,10 +2074,12 @@ def rapport_delete(rapport_id):
 @respo_required
 def rapport_clear():
     try:
-        Rapport.query.delete(); db.session.commit()
+        Rapport.query.delete(synchronize_session=False)
+        db.session.commit()
         flash("Historique des rapports vidé avec succès.", "success")
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        logger.error("Erreur vidage historique rapports : %s", e)
         flash("Erreur lors de la suppression de l'historique.", "danger")
     return redirect(url_for("rapport"))
 
@@ -2048,7 +2092,7 @@ def rapport_download(filename):
     if not os.path.exists(filepath):
         abort(404)
     return send_file(filepath, as_attachment=True)
-    
+
 # ==========================
 # TENDANCES
 # ==========================
@@ -2129,6 +2173,10 @@ def student():
     semestre_selected   = request.values.get("semestre",   "all")
     q = request.args.get("q", "").strip().lower()
 
+    fid_filtre = _parse_int(filiere_selected)    if filiere_selected    != "all" else None
+    sid_filtre = _parse_int(specialite_selected) if specialite_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)     if niveau_selected     != "all" else None
+
     filieres    = Filiere.query.order_by(Filiere.nom_filiere).all()
     specialites = Specialite.query.order_by(Specialite.nom_specialite).all()
     niveaux     = Niveau.query.order_by(Niveau.libelle).all()
@@ -2148,12 +2196,9 @@ def student():
         annee_id=annee_active.id_annee if annee_active else None
     ).join(Etudiant).join(Filiere).join(Niveau)
 
-    try:
-        if filiere_selected    != "all": query = query.filter(Inscription.id_filiere    == int(filiere_selected))
-        if specialite_selected != "all": query = query.filter(Inscription.id_specialite == int(specialite_selected))
-        if niveau_selected     != "all": query = query.filter(Inscription.id_niveau     == int(niveau_selected))
-    except ValueError:
-        pass
+    if fid_filtre is not None: query = query.filter(Inscription.id_filiere    == fid_filtre)
+    if sid_filtre is not None: query = query.filter(Inscription.id_specialite == sid_filtre)
+    if nid_filtre is not None: query = query.filter(Inscription.id_niveau     == nid_filtre)
     query = appliquer_filtre_semestre(query, semestre_selected)
     if q:
         query = query.filter(or_(
@@ -2283,13 +2328,9 @@ def notes_etudiant(matricule):
         .options(joinedload(Resultat.matiere), joinedload(Resultat.semestre))
     )
 
-    semestre_id_filtre = None
-    if semestre_selected != 'all':
-        try:
-            semestre_id_filtre = int(semestre_selected)
-            query = query.filter(Resultat.id_semestre == semestre_id_filtre)
-        except ValueError:
-            pass
+    semestre_id_filtre = _parse_int(semestre_selected) if semestre_selected != 'all' else None
+    if semestre_id_filtre is not None:
+        query = query.filter(Resultat.id_semestre == semestre_id_filtre)
 
     resultats = query.all()
 
@@ -2385,19 +2426,16 @@ def filiere():
     filiere_selected  = request.args.get("filiere",  "all")
     semestre_selected = request.args.get("semestre", "all")
 
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+
     filieres_list = Filiere.query.order_by(Filiere.nom_filiere).all()
     semestres     = get_semestres()
 
     all_inscriptions_q = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
     )
-    if filiere_selected != "all":
-        try:
-            all_inscriptions_q = all_inscriptions_q.filter(
-                Inscription.id_filiere == int(filiere_selected)
-            )
-        except ValueError:
-            pass
+    if fid_filtre is not None:
+        all_inscriptions_q = all_inscriptions_q.filter(Inscription.id_filiere == fid_filtre)
     all_inscriptions = all_inscriptions_q.all()
 
     all_ml_results = predict_batch(all_inscriptions)
@@ -2408,12 +2446,8 @@ def filiere():
         insc_par_filiere[ins.id_filiere].append(ins)
 
     filieres_a_afficher = filieres_list
-    if filiere_selected != "all":
-        try:
-            fid = int(filiere_selected)
-            filieres_a_afficher = [f for f in filieres_list if f.id_filiere == fid]
-        except ValueError:
-            pass
+    if fid_filtre is not None:
+        filieres_a_afficher = [f for f in filieres_list if f.id_filiere == fid_filtre]
 
     stats = []
     for f in filieres_a_afficher:
@@ -2468,6 +2502,8 @@ def filiere():
             "risque_niv":        niv_ml_filiere,
         })
 
+    stats.sort(key=lambda s: s["taux_reussite"], reverse=True)
+
     return render_template(
         "respo/filiere.html",
         filieres=stats, filieres_list=filieres_list,
@@ -2487,16 +2523,18 @@ def alerte():
     semestre_selected = request.args.get("semestre", "all")
     niveau_selected   = request.args.get("niveau",   "all")
     filiere_selected  = request.args.get("filiere",  "all")
+    genre_filter      = normaliser_genre(request.args.get("genre", "all"))
+
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
 
     query = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
-    )
-    if niveau_selected != "all":
-        try: query = query.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
-    if filiere_selected != "all":
-        try: query = query.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
+    ).join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)
+    query = appliquer_filtre_genre(query, genre_filter)
+
+    if nid_filtre is not None: query = query.filter(Inscription.id_niveau  == nid_filtre)
+    if fid_filtre is not None: query = query.filter(Inscription.id_filiere == fid_filtre)
 
     if semestre_selected == "1":
         query = query.filter(Inscription.moyenne_s1.isnot(None), Inscription.moyenne_s1 < 10)
@@ -2619,57 +2657,48 @@ def alerte():
         Inscription.id_niveau, Niveau.libelle,
         func.count(Inscription.id_inscription).label("total"),
         func.sum(case((condition, 1), else_=0)).label("echecs"),
-    ).join(Niveau, Inscription.id_niveau == Niveau.id_niveau)
+    ).join(Niveau, Inscription.id_niveau == Niveau.id_niveau)\
+     .join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)
+    niveau_agg_q = appliquer_filtre_genre(niveau_agg_q, genre_filter)
     if annee_active: niveau_agg_q = niveau_agg_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if niveau_selected != "all":
-        try: niveau_agg_q = niveau_agg_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
-    if filiere_selected != "all":
-        try: niveau_agg_q = niveau_agg_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
+    if nid_filtre is not None: niveau_agg_q = niveau_agg_q.filter(Inscription.id_niveau == nid_filtre)
+    if fid_filtre is not None: niveau_agg_q = niveau_agg_q.filter(Inscription.id_filiere == fid_filtre)
     niveau_agg = niveau_agg_q.group_by(Inscription.id_niveau, Niveau.libelle).all()
 
     filiere_agg_q = db.session.query(
         Inscription.id_filiere,
         func.count(Inscription.id_inscription).label("total"),
         func.sum(case((condition, 1), else_=0)).label("echecs"),
-    )
+    ).join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)
+    filiere_agg_q = appliquer_filtre_genre(filiere_agg_q, genre_filter)
     if annee_active: filiere_agg_q = filiere_agg_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if niveau_selected != "all":
-        try: filiere_agg_q = filiere_agg_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
-    if filiere_selected != "all":
-        try: filiere_agg_q = filiere_agg_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
+    if nid_filtre is not None: filiere_agg_q = filiere_agg_q.filter(Inscription.id_niveau == nid_filtre)
+    if fid_filtre is not None: filiere_agg_q = filiere_agg_q.filter(Inscription.id_filiere == fid_filtre)
     filiere_agg = filiere_agg_q.group_by(Inscription.id_filiere).all()
 
     risques_q = (
         db.session.query(Matiere.id_matiere)
         .join(Resultat,    Resultat.id_matiere        == Matiere.id_matiere)
         .join(Inscription, Inscription.id_inscription == Resultat.id_inscription)
+        .join(Etudiant,    Inscription.id_etudiant    == Etudiant.id_etudiant)
         .filter(Resultat.moyenne.isnot(None))
     )
+    risques_q = appliquer_filtre_genre(risques_q, genre_filter)
     if annee_active: risques_q = risques_q.filter(Inscription.id_annee == annee_active.id_annee)
     if semestre_selected in ("1", "2"):
         risques_q = risques_q.filter(Resultat.id_semestre % 2 == int(semestre_selected) % 2)
-    if niveau_selected != "all":
-        try: risques_q = risques_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
-    if filiere_selected != "all":
-        try: risques_q = risques_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
+    if nid_filtre is not None: risques_q = risques_q.filter(Inscription.id_niveau == nid_filtre)
+    if fid_filtre is not None: risques_q = risques_q.filter(Inscription.id_filiere == fid_filtre)
     risques = risques_q.group_by(Matiere.id_matiere)\
         .having(func.sum(case((Resultat.moyenne < 10, 1), else_=0)) > 0).count()
 
     abandon_q = db.session.query(func.count(Inscription.id_inscription))\
+        .join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)\
         .filter(Inscription.moyenne_s1.is_(None), Inscription.moyenne_s2.is_(None))
+    abandon_q = appliquer_filtre_genre(abandon_q, genre_filter)
     if annee_active: abandon_q = abandon_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if niveau_selected != "all":
-        try: abandon_q = abandon_q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
-    if filiere_selected != "all":
-        try: abandon_q = abandon_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
+    if nid_filtre is not None: abandon_q = abandon_q.filter(Inscription.id_niveau == nid_filtre)
+    if fid_filtre is not None: abandon_q = abandon_q.filter(Inscription.id_filiere == fid_filtre)
     abandon = abandon_q.scalar() or 0
 
     filiere_objs = {f.id_filiere: f for f in Filiere.query.all()}
@@ -2677,7 +2706,9 @@ def alerte():
     abandon_par_filiere_q = db.session.query(
         Inscription.id_filiere,
         func.count(Inscription.id_inscription).label("nb_abandons"),
-    ).filter(Inscription.moyenne_s1.is_(None), Inscription.moyenne_s2.is_(None))
+    ).join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)\
+     .filter(Inscription.moyenne_s1.is_(None), Inscription.moyenne_s2.is_(None))
+    abandon_par_filiere_q = appliquer_filtre_genre(abandon_par_filiere_q, genre_filter)
     if annee_active:
         abandon_par_filiere_q = abandon_par_filiere_q.filter(Inscription.id_annee == annee_active.id_annee)
     abandon_par_filiere_agg = {
@@ -2685,86 +2716,103 @@ def alerte():
         for row in abandon_par_filiere_q.group_by(Inscription.id_filiere).all()
     }
 
-    for row in filiere_agg:
-        f_obj         = filiere_objs.get(row.id_filiere)
-        nom_f         = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
-        nb_abandons_f = abandon_par_filiere_agg.get(row.id_filiere, 0)
-        if nb_abandons_f > 0:
-            upsert_alerte(f"abandon_filiere_{row.id_filiere}",
-                f"Abandon détecté : {nb_abandons_f} étudiant(s) en abandon · {nom_f}")
+    mot_etudiants  = "étudiante(s)"   if genre_filter == "F_GROUP" else "étudiant(s)"
+    mot_inscrit    = "inscrite(s)"    if genre_filter == "F_GROUP" else "inscrit(s)"
+    mot_redoublant = "redoublante(s)" if genre_filter == "F_GROUP" else "redoublant(s)"
+    mot_detecte    = "détectée(s)"    if genre_filter == "F_GROUP" else "détecté(s)"
 
-    if total_alertes > 0:
-        msg = (f"{total_alertes} étudiant(s) à risque · {critiques_filieres} critiques · "
-               f"{nb_abandons_ml} à fort risque d'abandon ({proba_moy:.0f}%)")
-        if annee_active: msg += f" · {annee_active.libelle}"
-        upsert_alerte("etudiants_a_risque", msg)
+    try:
+        for row in filiere_agg:
+            f_obj         = filiere_objs.get(row.id_filiere)
+            nom_f         = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
+            nb_abandons_f = abandon_par_filiere_agg.get(row.id_filiere, 0)
+            if nb_abandons_f > 0:
+                upsert_alerte(f"abandon_filiere_{row.id_filiere}",
+                    f"Abandon détecté : {nb_abandons_f} {mot_etudiants} en abandon · {nom_f}")
 
-    for row in filiere_agg:
-        if (row.total or 0) > 0 and (float(row.echecs or 0) / float(row.total)) >= 0.5:
-            f_obj = filiere_objs.get(row.id_filiere)
-            nom_f = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
-            taux  = round((float(row.echecs or 0) / float(row.total)) * 100, 1)
-            upsert_alerte(f"echec_critique_filiere_{row.id_filiere}",
-                f"Taux d'échec critique : {taux}% d'échec dans la filière {nom_f}")
+        if total_alertes > 0:
+            msg = (f"{total_alertes} {mot_etudiants} à risque · {critiques_filieres} critiques · "
+                   f"{nb_abandons_ml} à fort risque d'abandon ({proba_moy:.0f}%)")
+            if annee_active: msg += f" · {annee_active.libelle}"
+            upsert_alerte("etudiants_a_risque", msg)
 
-    for row in niveau_agg:
-        if (row.total or 0) > 0:
-            taux_r = (float(row.total) - float(row.echecs or 0)) / float(row.total)
-            if taux_r < 0.3:
-                upsert_alerte(f"faible_reussite_niveau_{row.id_niveau}",
-                    f"Faible réussite : seulement {round(taux_r * 100, 1)}% d'admis au niveau {row.libelle}")
+        for row in filiere_agg:
+            if (row.total or 0) > 0 and (float(row.echecs or 0) / float(row.total)) >= 0.5:
+                f_obj = filiere_objs.get(row.id_filiere)
+                nom_f = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
+                taux  = round((float(row.echecs or 0) / float(row.total)) * 100, 1)
+                upsert_alerte(f"echec_critique_filiere_{row.id_filiere}",
+                    f"Taux d'échec critique : {taux}% d'échec dans la filière {nom_f}")
 
-    matieres_critiques_q = (
-        db.session.query(
-            Matiere.id_matiere, Matiere.nom_matiere,
-            func.count(Resultat.id_resultat).label("total"),
-            func.sum(case((Resultat.moyenne < 10, 1), else_=0)).label("echecs")
+        for row in niveau_agg:
+            if (row.total or 0) > 0:
+                taux_r = (float(row.total) - float(row.echecs or 0)) / float(row.total)
+                if taux_r < 0.3:
+                    upsert_alerte(f"faible_reussite_niveau_{row.id_niveau}",
+                        f"Faible réussite : seulement {round(taux_r * 100, 1)}% d'admis au niveau {row.libelle}")
+
+        matieres_critiques_q = (
+            db.session.query(
+                Matiere.id_matiere, Matiere.nom_matiere,
+                func.count(Resultat.id_resultat).label("total"),
+                func.sum(case((Resultat.moyenne < 10, 1), else_=0)).label("echecs")
+            )
+            .join(Resultat,    Resultat.id_matiere     == Matiere.id_matiere)
+            .join(Inscription, Resultat.id_inscription == Inscription.id_inscription)
+            .join(Etudiant,    Inscription.id_etudiant == Etudiant.id_etudiant)
+            .filter(Resultat.moyenne.isnot(None))
         )
-        .join(Resultat,    Resultat.id_matiere     == Matiere.id_matiere)
-        .join(Inscription, Resultat.id_inscription == Inscription.id_inscription)
-        .filter(Resultat.moyenne.isnot(None))
-    )
-    if annee_active: matieres_critiques_q = matieres_critiques_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if filiere_selected != "all":
-        try: matieres_critiques_q = matieres_critiques_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
-    for row in matieres_critiques_q.group_by(Matiere.id_matiere, Matiere.nom_matiere).all():
-        if (row.total or 0) >= 5 and (float(row.echecs or 0) / float(row.total)) >= 0.7:
-            taux = round((float(row.echecs or 0) / float(row.total)) * 100, 1)
-            upsert_alerte(f"matiere_critique_{row.id_matiere}",
-                f"Matière critique : {taux}% d'échec en {row.nom_matiere}")
+        matieres_critiques_q = appliquer_filtre_genre(matieres_critiques_q, genre_filter)
+        if annee_active: matieres_critiques_q = matieres_critiques_q.filter(Inscription.id_annee == annee_active.id_annee)
+        if fid_filtre is not None:
+            matieres_critiques_q = matieres_critiques_q.filter(Inscription.id_filiere == fid_filtre)
+        for row in matieres_critiques_q.group_by(Matiere.id_matiere, Matiere.nom_matiere).all():
+            if (row.total or 0) >= 5 and (float(row.echecs or 0) / float(row.total)) >= 0.7:
+                taux = round((float(row.echecs or 0) / float(row.total)) * 100, 1)
+                upsert_alerte(f"matiere_critique_{row.id_matiere}",
+                    f"Matière critique : {taux}% d'échec en {row.nom_matiere}")
 
-    for row in filiere_agg:
-        if int(row.total or 0) < 5:
-            f_obj = filiere_objs.get(row.id_filiere)
-            nom_f = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
-            upsert_alerte(f"effectif_faible_{row.id_filiere}",
-                f"Effectif faible : seulement {int(row.total or 0)} étudiant(s) inscrit(s) en {nom_f}")
+        for row in filiere_agg:
+            if int(row.total or 0) < 5:
+                f_obj = filiere_objs.get(row.id_filiere)
+                nom_f = f_obj.nom_filiere if f_obj else f"Filière {row.id_filiere}"
+                upsert_alerte(f"effectif_faible_{row.id_filiere}",
+                    f"Effectif faible : seulement {int(row.total or 0)} {mot_etudiants} {mot_inscrit} en {nom_f}")
 
-    redoublants_q = db.session.query(func.count(Inscription.id_inscription))\
-        .filter(Inscription.est_redoublant == True)
-    if annee_active: redoublants_q = redoublants_q.filter(Inscription.id_annee == annee_active.id_annee)
-    if filiere_selected != "all":
-        try: redoublants_q = redoublants_q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
-    nb_redoublants = redoublants_q.scalar() or 0
-    if nb_redoublants > 0:
-        upsert_alerte("redoublants",
-            f"{nb_redoublants} étudiant(s) redoublant(s) détecté(s)"
-            + (f" · {annee_active.libelle}" if annee_active else ""))
+        redoublants_q = db.session.query(func.count(Inscription.id_inscription))\
+            .join(Etudiant, Inscription.id_etudiant == Etudiant.id_etudiant)\
+            .filter(Inscription.est_redoublant == True)
+        redoublants_q = appliquer_filtre_genre(redoublants_q, genre_filter)
+        if annee_active: redoublants_q = redoublants_q.filter(Inscription.id_annee == annee_active.id_annee)
+        if fid_filtre is not None:
+            redoublants_q = redoublants_q.filter(Inscription.id_filiere == fid_filtre)
+        nb_redoublants = redoublants_q.scalar() or 0
+        if nb_redoublants > 0:
+            upsert_alerte("redoublants",
+                f"{nb_redoublants} {mot_etudiants} {mot_redoublant} {mot_detecte}"
+                + (f" · {annee_active.libelle}" if annee_active else ""))
 
-    if nb_abandons_ml > 0:
-        upsert_alerte("ml_abandon_probable",
-            f"IUADECIS : {nb_abandons_ml} étudiant(s) à fort risque d'abandon (probabilité ≥ 70%)")
-    else:
-        delete_alerte("ml_abandon_probable")
+        if nb_abandons_ml > 0:
+            upsert_alerte("ml_abandon_probable",
+                f"IUADECIS : {nb_abandons_ml} {mot_etudiants} à fort risque d'abandon (probabilité ≥ 70%)")
+        else:
+            delete_alerte("ml_abandon_probable")
 
-    db.session.commit()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Erreur génération des alertes (route /alerte) : %s", e)
 
     nb_alertes    = db.session.query(func.count(Alerte.id_alerte)).scalar() or 0
     semestres     = get_semestres()
     niveaux       = Niveau.query.all()
     filieres_list = Filiere.query.all()
+
+    genre_filter_label = (
+        "Masculin" if genre_filter == "M_GROUP" else
+        "Féminin"  if genre_filter == "F_GROUP" else
+        "all"
+    )
 
     return render_template(
         "respo/alerte.html",
@@ -2776,6 +2824,7 @@ def alerte():
         nb_abandons_ml=nb_abandons_ml, proba_abandon_moy=proba_moy,
         nb_alertes=nb_alertes, semestre=semestres, semestre_selected=semestre_selected,
         niveau_selected=niveau_selected, filiere_selected=filiere_selected,
+        genre_filter=genre_filter_label,
         niveaux=niveaux, filieres_list=filieres_list, annee_active=annee_active,
         ml_source=ml_engine.status().get("risk_model_trained") and "ml" or "heuristic",
         title='Alertes & Risques'
@@ -2959,18 +3008,17 @@ def recommandations():
     filiere_selected = request.args.get("filiere", "all")
     niveau_selected  = request.args.get("niveau",  "all")
 
+    fid_filtre = _parse_int(filiere_selected) if filiere_selected != "all" else None
+    nid_filtre = _parse_int(niveau_selected)  if niveau_selected  != "all" else None
+
     filieres = Filiere.query.order_by(Filiere.nom_filiere).all()
     niveaux  = Niveau.query.order_by(Niveau.libelle).all()
 
     q = _query_inscriptions_avec_relations(
         annee_id=annee_active.id_annee if annee_active else None
     )
-    if filiere_selected != "all":
-        try: q = q.filter(Inscription.id_filiere == int(filiere_selected))
-        except ValueError: pass
-    if niveau_selected != "all":
-        try: q = q.filter(Inscription.id_niveau == int(niveau_selected))
-        except ValueError: pass
+    if fid_filtre is not None: q = q.filter(Inscription.id_filiere == fid_filtre)
+    if nid_filtre is not None: q = q.filter(Inscription.id_niveau  == nid_filtre)
     inscriptions = q.all()
     total = len(inscriptions)
 
@@ -3045,9 +3093,15 @@ def create_admin():
             email=form.email.data, mot_de_passe=hashed_password,
             genre=form.genre.data, image_file='default.jpg',
         )
-        db.session.add(admin); db.session.commit()
-        flash("Compte administrateur système créé avec succès.", "success")
-        return redirect(url_for("login"))
+        try:
+            db.session.add(admin)
+            db.session.commit()
+            flash("Compte administrateur système créé avec succès.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Erreur création admin %s : %s", form.email.data, e)
+            flash("Erreur lors de la création du compte.", "danger")
     return render_template("admin/create_admin.html", form=form, title="Création de compte")
 
 
@@ -3123,8 +3177,13 @@ def compte():
         current_user.genre  = form.genre.data
         if form.password.data:
             current_user.mot_de_passe = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        db.session.commit()
-        flash('Votre compte a été mis à jour avec succès', 'success')
+        try:
+            db.session.commit()
+            flash('Votre compte a été mis à jour avec succès', 'success')
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Erreur mise à jour compte %s : %s", current_user.email, e)
+            flash("Erreur lors de la mise à jour du compte.", "danger")
         return redirect(url_for('compte'))
     elif request.method == 'GET':
         form.first_name.data = current_user.nom
@@ -3141,49 +3200,89 @@ def parametrage():
     def parse_date(d):
         try:
             return datetime.strptime(d, "%Y-%m-%d").date() if d else None
-        except ValueError:
+        except (ValueError, TypeError):
             return None
 
     if request.method == "POST":
         action   = request.form.get("action", "creer")
         id_annee = request.form.get("id_annee")
+
+        # ── Modification d'une année existante ──────────────────────────
         if action == "modifier":
-            annee = db.session.get(AnneeScolaire, id_annee)
-            if annee:
-                annee.date_debut = parse_date(request.form.get("date_debut")) or annee.date_debut
-                annee.date_fin   = parse_date(request.form.get("date_fin"))   or annee.date_fin
+            id_annee_int = _parse_int(id_annee)
+            if id_annee_int is None:
+                flash("Identifiant d'année invalide.", "danger")
+                return redirect(url_for("parametrage"))
+
+            annee = db.session.get(AnneeScolaire, id_annee_int)
+            if not annee:
+                flash("Année introuvable.", "danger")
+                return redirect(url_for("parametrage"))
+
+            nouvelle_date_debut = parse_date(request.form.get("date_debut")) or annee.date_debut
+            nouvelle_date_fin   = parse_date(request.form.get("date_fin"))   or annee.date_fin
+
+            if nouvelle_date_fin <= nouvelle_date_debut:
+                flash("La date de fin doit être postérieure à la date de début.", "danger")
+                return redirect(url_for("parametrage", edit=id_annee_int))
+
+            try:
+                annee.date_debut = nouvelle_date_debut
+                annee.date_fin   = nouvelle_date_fin
                 db.session.commit()
                 flash(f"Année « {annee.libelle} » mise à jour.", "success")
+            except Exception as e:
+                db.session.rollback()
+                logger.error("Erreur mise à jour année %s : %s", id_annee_int, e)
+                flash("Erreur lors de la mise à jour de l'année.", "danger")
+
             return redirect(url_for("parametrage"))
 
+        # ── Création d'une nouvelle année ───────────────────────────────
         libelle    = request.form.get("annee_libelle", "").strip()
-        date_debut = request.form.get("date_debut")
-        date_fin   = request.form.get("date_fin")
+        date_debut = parse_date(request.form.get("date_debut"))
+        date_fin   = parse_date(request.form.get("date_fin"))
+
         if not libelle or not date_debut or not date_fin:
-            flash("Tous les champs sont obligatoires.", "danger")
+            flash("Tous les champs sont obligatoires et les dates doivent être valides.", "danger")
             return redirect(url_for("parametrage"))
+
+        if date_fin <= date_debut:
+            flash("La date de fin doit être postérieure à la date de début.", "danger")
+            return redirect(url_for("parametrage"))
+
         if AnneeScolaire.query.filter_by(libelle=libelle).first():
             flash(f"L'année « {libelle} » existe déjà.", "danger")
             return redirect(url_for("parametrage"))
 
-        annee_precedente = AnneeScolaire.query.filter_by(active=True).first()
-        if annee_precedente and annee_precedente.date_fin >= date.today():
-            flash(f"Impossible de créer une nouvelle année : « {annee_precedente.libelle} » est encore active.", "warning")
+        annee_active_actuelle = AnneeScolaire.query.filter_by(active=True).first()
+        if annee_active_actuelle and not _annee_est_terminee(annee_active_actuelle):
+            flash(
+                f"Impossible de créer une nouvelle année : "
+                f"« {annee_active_actuelle.libelle} » est encore active.",
+                "warning"
+            )
             return redirect(url_for("parametrage"))
 
-        AnneeScolaire.query.update({"active": False})
-        db.session.add(AnneeScolaire(
-            libelle=libelle, date_debut=parse_date(date_debut),
-            date_fin=parse_date(date_fin), active=True,
-        ))
+        try:
+            AnneeScolaire.query.update({"active": False}, synchronize_session=False)
+            db.session.add(AnneeScolaire(
+                libelle=libelle, date_debut=date_debut,
+                date_fin=date_fin, active=True,
+            ))
 
-        nb_alertes_supprimees = Alerte.query.delete()
-        logger.info(
-            "Changement d'année scolaire → %d alerte(s) supprimée(s) — nouvelle année : %s",
-            nb_alertes_supprimees, libelle
-        )
+            nb_alertes_supprimees = Alerte.query.delete(synchronize_session=False)
+            logger.info(
+                "Changement d'année scolaire → %d alerte(s) supprimée(s) — nouvelle année : %s",
+                nb_alertes_supprimees, libelle
+            )
 
-        db.session.commit()
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Erreur création année %s : %s", libelle, e)
+            flash("Erreur lors de la création de l'année.", "danger")
+            return redirect(url_for("parametrage"))
 
         try:
             ml_engine.auto_train_if_needed(lambda: Inscription.query.all(), force=True)
@@ -3194,15 +3293,24 @@ def parametrage():
 
         return redirect(url_for("parametrage"))
 
+    # ── GET : recherche + affichage ──────────────────────────────────────
     q     = request.args.get("q", "").strip()
     query = AnneeScolaire.query
+
     if q:
         date_q = None
         for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-            try: date_q = datetime.strptime(q, fmt).date(); break
-            except ValueError: pass
+            try:
+                date_q = datetime.strptime(q, fmt).date()
+                break
+            except ValueError:
+                pass
+
         if date_q:
-            query = query.filter(or_(AnneeScolaire.date_debut == date_q, AnneeScolaire.date_fin == date_q))
+            query = query.filter(or_(
+                AnneeScolaire.date_debut == date_q,
+                AnneeScolaire.date_fin   == date_q,
+            ))
         elif q.isdigit():
             query = query.filter(or_(
                 extract('year', AnneeScolaire.date_debut) == int(q),
@@ -3215,14 +3323,18 @@ def parametrage():
                 cast(AnneeScolaire.date_debut, String).ilike(f"%{q}%"),
                 cast(AnneeScolaire.date_fin,   String).ilike(f"%{q}%"),
             ))
-    else:
-        query = query.order_by(AnneeScolaire.date_debut.desc())
 
-    params           = query.all()
-    edit_id          = request.args.get("edit")
-    annee_edit       = db.session.get(AnneeScolaire, edit_id) if edit_id else None
+    # ✅ FIX : le tri s'applique désormais dans tous les cas, recherche ou non
+    params = query.order_by(AnneeScolaire.date_debut.desc()).all()
+
+    edit_id_raw = request.args.get("edit")
+    annee_edit  = None
+    edit_id_int = _parse_int(edit_id_raw)
+    if edit_id_int is not None:
+        annee_edit = db.session.get(AnneeScolaire, edit_id_int)
+
     annee_active     = AnneeScolaire.query.filter_by(active=True).first()
-    creation_bloquee = annee_active and annee_active.date_fin >= date.today()
+    creation_bloquee = bool(annee_active and not _annee_est_terminee(annee_active))
 
     return render_template(
         "admin/parametrage.html",
@@ -3285,22 +3397,32 @@ def gestion():
             mot_de_passe=hashed_password, role=form.role.data, genre=form.genre.data,
             created_at=datetime.utcnow(),
         )
-        db.session.add(new_user)
-        db.session.commit()
-        flash("Compte responsable pédagogique créé avec succès !", "success")
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash("Compte responsable pédagogique créé avec succès !", "success")
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Erreur création respo %s : %s", form.email.data, e)
+            flash("Erreur lors de la création du compte.", "danger")
         return redirect(url_for("gestion"))
 
     users = Respo_peda.query.all()
-    return render_template("admin/gestion.html", form=form, users=users,title='Gestion')
+    return render_template("admin/gestion.html", form=form, users=users, title='Gestion')
 
 
 @app.route("/delete_user/<int:user_id>", methods=["POST"])
 @admin_required
 def delete_user(user_id):
     user = Respo_peda.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash("Compte supprimé avec succès !", "success")
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        flash("Compte supprimé avec succès !", "success")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Erreur suppression respo %s : %s", user_id, e)
+        flash("Erreur lors de la suppression du compte.", "danger")
     return redirect(url_for("gestion"))
 
 
@@ -3329,20 +3451,24 @@ def init_scheduler(app):
                 logger.info("Clôture automatique : %s", annee.libelle)
                 bilan = cloture_annee(annee.id_annee)
                 if bilan.get("success"):
-                    Alerte.query.filter(
-                        Alerte.type_alerte != f"cloture_auto_{annee.id_annee}"
-                    ).delete(synchronize_session=False)
+                    try:
+                        Alerte.query.filter(
+                            Alerte.type_alerte != f"cloture_auto_{annee.id_annee}"
+                        ).delete(synchronize_session=False)
 
-                    upsert_alerte(
-                        f"cloture_auto_{annee.id_annee}",
-                        f"Clôture automatique {annee.libelle} — "
-                        f"{bilan['admis']} admis · {bilan['admis_dettes']} dettes · "
-                        f"{bilan['redoublants']} redoublants · {bilan['abandons']} abandons"
-                    )
-                    db.session.commit()
-                    logger.info(
-                        "Alertes supprimées à la clôture de l'année %s", annee.libelle
-                    )
+                        upsert_alerte(
+                            f"cloture_auto_{annee.id_annee}",
+                            f"Clôture automatique {annee.libelle} — "
+                            f"{bilan['admis']} admis · {bilan['admis_dettes']} dettes · "
+                            f"{bilan['redoublants']} redoublants · {bilan['abandons']} abandons"
+                        )
+                        db.session.commit()
+                        logger.info(
+                            "Alertes supprimées à la clôture de l'année %s", annee.libelle
+                        )
+                    except Exception as e:
+                        db.session.rollback()
+                        logger.error("Erreur post-clôture pour %s : %s", annee.libelle, e)
                 else:
                     logger.error("Clôture auto échouée pour %s : %s",
                                  annee.libelle, bilan.get("erreur"))
@@ -3801,8 +3927,8 @@ def telecharger_template(type_import):
         ws.title  = "Étudiants"
         headers   = ['matricule', 'nom', 'prenom', 'genre', 'annee_naissance', 'pays']
         exemples  = [
-            ['ETU001', 'Kouassi', 'Jean',    'Masculin', 2001, "Côte d'Ivoire"],
-            ['ETU002', 'Traoré',  'Aminata', 'Féminin',  2002, 'Mali'],
+            ['IUA001', 'Kouassi', 'Jean',    'Masculin', 2001, "Côte d'Ivoire"],
+            ['IUA002', 'Traoré',  'Aminata', 'Féminin',  2002, 'Mali'],
         ]
         largeurs  = [14, 16, 16, 12, 16, 18]
         notes     = [

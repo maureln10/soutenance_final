@@ -90,12 +90,12 @@ h2::after {
 .kpi-row .col-md-2 { padding: 0 8px; margin-bottom: 16px; }
 
 .kpi-red   h4 { color: #ef4444; }
-.kpi-amber h4 { color: #f59e0b; }
+.kpi-amber h4 { color: #eab308; }
 .kpi-blue  h4 { color: #3b82f6; }
 .kpi-green h4 { color: #10b981; }
 
 .kpi-red   .card-body i { color: #ef4444; background: #fee2e2; }
-.kpi-amber .card-body i { color: #f59e0b; background: #fef3c7; }
+.kpi-amber .card-body i { color: #eab308; background: #fef9c3; }
 .kpi-blue  .card-body i { color: #3b82f6; background: #dbeafe; }
 .kpi-green .card-body i { color: #10b981; background: #d1fae5; }
 
@@ -200,7 +200,7 @@ h2::after {
 
 .moyenne-val { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
 .moyenne-val.bar-red   { color: #ef4444; }
-.moyenne-val.bar-amber { color: #f59e0b; }
+.moyenne-val.bar-amber { color: #eab308; }
 .moyenne-val.bar-green { color: #10b981; }
 
 .risk-cell {
@@ -220,7 +220,7 @@ h2::after {
   width: fit-content;
 }
 .risk-badge.critique { background: #fee2e2; color: #b91c1c; }
-.risk-badge.modere   { background: #fff7ed; color: #c2410c; }
+.risk-badge.modere   { background: #fef9c3; color: #854d0e; }
 .risk-badge.surveillance { background: #fefce8; color: #a16207; }
 .risk-badge.ok       { background: #dcfce7; color: #15803d; }
 .risk-badge.info     { background: #dbeafe; color: #1d4ed8; }
@@ -247,7 +247,7 @@ h2::after {
 }
 
 .risk-bar-fill.bar-red   { background: #ef4444; }
-.risk-bar-fill.bar-amber { background: #f59e0b; }
+.risk-bar-fill.bar-amber { background: #eab308; }
 .risk-bar-fill.bar-green { background: #10b981; }
 
 .taux-label {
@@ -256,7 +256,7 @@ h2::after {
   white-space: nowrap;
 }
 .taux-red   { color: #ef4444; }
-.taux-amber { color: #f59e0b; }
+.taux-amber { color: #eab308; }
 .taux-green { color: #10b981; }
 
 .credits-label { font-weight: 600; }
@@ -611,6 +611,9 @@ h2::after {
                           else 'modere'       if e.score_risque >= 35
                           else 'surveillance' if e.score_risque >= 15
                           else 'ok' %}
+                {% set bar_css = 'red' if niv == 'critique'
+                               else 'amber' if niv in ('modere', 'surveillance')
+                               else 'green' %}
                 <div class="risk-cell">
                   <span class="risk-badge {{ niv }}">
                     {% if niv == 'critique' %}⚠ Critique
@@ -621,10 +624,10 @@ h2::after {
                   </span>
                   <div class="risk-bar-wrap">
                     <div class="risk-bar-track">
-                      <div class="risk-bar-fill bar-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}"
+                      <div class="risk-bar-fill bar-{{ bar_css }}"
                            style="--w: {{ e.score_risque }}%"></div>
                     </div>
-                    <span class="taux-label taux-{% if niv == 'critique' %}red{% elif niv == 'modere' %}amber{% else %}green{% endif %}">
+                    <span class="taux-label taux-{{ bar_css }}">
                       {{ e.score_risque }}%
                     </span>
                   </div>

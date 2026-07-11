@@ -209,7 +209,7 @@ h2::after {
 <div id="toast-matieres"></div>
 
 <div class="container-fluid">
-  <h2 class="mb-1">Tableau de Bord par Matière</h2><br><br>
+  <h2 class="mb-1"> Matière</h2><br><br>
   <p class="text-muted">
     Analyse des performances par unité d'enseignement · {{ annee_active.libelle }}
   </p><br>
@@ -476,7 +476,7 @@ h2::after {
         bg:     mode_all ? '#eff6ff' : '#fef2f2',
         border: mode_all ? '#3b82f6' : '#ef4444',
         color:  mode_all ? '#1d4ed8' : '#991b1b',
-        icon:   mode_all ? 'bi-credit-card-fill' : 'bi-exclamation-circle-fill',
+        icon:   mode_all ? 'bi-person-fill' : 'bi-exclamation-circle-fill',
         label:  label,
         msg:    `${total_ajournes} étudiant${total_ajournes > 1 ? 's' : ''} ${mot}${total_ajournes > 1 ? 's' : ''} sur ces matières.`
       });

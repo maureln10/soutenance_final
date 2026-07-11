@@ -57,40 +57,181 @@
       padding: 0; line-height: 1; flex-shrink: 0;
     }
     .flash-toast-close:hover { opacity: 1; }
-  
+
+/* ══════════════════════════════════════════
+   NOTIFICATIONS — dropdown amélioré
+   ══════════════════════════════════════════ */
 .notif-wrapper { position: relative; }
+
 .notif-dropdown {
-  display: none; position: absolute; top: 48px; right: 0;
-  width: 340px; background: #fff; border: 1px solid #e5e7eb;
-  border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  z-index: 9999; overflow: hidden;
+  display: none;
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 360px;
+  background: #fff;
+  border: 1px solid #edf1f7;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06);
+  z-index: 9999;
+  overflow: hidden;
 }
-.notif-dropdown.open { display: block; animation: notifFadeIn 0.15s ease; }
-@keyframes notifFadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.notif-dropdown.open {
+  display: block;
+  animation: notifFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes notifFadeIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
 .notif-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 16px 10px; border-bottom: 1px solid #f1f5f9;
-  font-size: 0.82rem; font-weight: 600; color: #1e293b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 100%);
 }
-.notif-count { color: #94a3b8; font-weight: 400; }
-.notif-voir-tout { font-size: 0.75rem; color: #3b82f6; text-decoration: none; }
-.notif-voir-tout:hover { text-decoration: underline; }
-.notif-list { max-height: 380px; overflow-y: auto; }
+.notif-header > span:first-child {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f1623;
+  letter-spacing: -0.01em;
+}
+.notif-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 1px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #4f7cff;
+  background: rgba(79, 124, 255, 0.10);
+  border-radius: 20px;
+}
+.notif-voir-tout {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #4f7cff;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.notif-voir-tout:hover { opacity: 0.7; text-decoration: none; }
+
+/* List */
+.notif-list {
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d9e0ec transparent;
+}
+.notif-list::-webkit-scrollbar { width: 5px; }
+.notif-list::-webkit-scrollbar-track { background: transparent; }
+.notif-list::-webkit-scrollbar-thumb { background: #d9e0ec; border-radius: 10px; }
+.notif-list::-webkit-scrollbar-thumb:hover { background: #c2cbe0; }
+
 .notif-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 11px 16px; border-bottom: 1px solid #f8fafc;
-  cursor: pointer; transition: background 0.1s;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid #f6f8fb;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s ease;
 }
+.notif-item:last-child { border-bottom: none; }
 .notif-item:hover { background: #f8fafc; }
-.notif-item.unread { background: #eff6ff; }
-.notif-item.unread:hover { background: #dbeafe; }
-.notif-icon { font-size: 1rem; padding-top: 2px; flex-shrink: 0; }
+
+.notif-item.unread { background: #f5f8ff; }
+.notif-item.unread:hover { background: #edf3ff; }
+.notif-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #4f7cff;
+}
+
+/* Icon in circular pill */
+.notif-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+.notif-item .notif-icon i { font-size: 0.95rem; color: inherit; }
+
+/* Color-coded pill backgrounds per alert type */
+.notif-item .notif-icon:has(.bi-exclamation-triangle-fill),
+.notif-item .notif-icon:has(.bi-x-circle-fill) {
+  background: #fee2e2; color: #ef4444;
+}
+.notif-item .notif-icon:has(.bi-person-x-fill) {
+  background: #fef3e2; color: #f59e0b;
+}
+.notif-item .notif-icon:has(.bi-info-circle-fill) {
+  background: #e8f0ff; color: #3b82f6;
+}
+
 .notif-body { flex: 1; min-width: 0; }
-.notif-msg { font-size: 0.78rem; color: #334155; margin: 0 0 3px; line-height: 1.4; }
-.notif-time { font-size: 0.72rem; color: #94a3b8; margin: 0; }
-.notif-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; margin-top: 5px; }
-.notif-empty { text-align: center; padding: 30px 16px; color: #94a3b8; font-size: 0.82rem; }
-.notif-empty i { font-size: 1.6rem; display: block; margin-bottom: 8px; }
+.notif-msg {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #263449;
+  margin: 0 0 4px;
+  line-height: 1.45;
+}
+.notif-item.unread .notif-msg { font-weight: 600; color: #0f1623; }
+.notif-time {
+  font-size: 0.71rem;
+  color: #9aa8bd;
+  margin: 0;
+  font-weight: 500;
+}
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4f7cff;
+  flex-shrink: 0;
+  margin-top: 6px;
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.15);
+}
+
+.notif-empty {
+  text-align: center;
+  padding: 44px 18px;
+  color: #b0bccf;
+}
+.notif-empty i { font-size: 2rem; display: block; margin-bottom: 10px; opacity: 0.7; }
+.notif-empty p { font-size: 0.85rem; color: #9aa8bd; font-weight: 500; }
+
+/* Footer */
+.notif-footer {
+  padding: 10px 18px;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+  background: #fbfcfe;
+}
+.notif-footer button {
+  background: none;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.notif-footer button:hover { color: #4f7cff; }
 
   </style>
 </head>
@@ -250,7 +391,7 @@
 
   <div class="notif-dropdown" id="notifDropdown">
     <div class="notif-header">
-      <span>Notifications <span class="notif-count">({{ nb_alertes }})</span></span>
+      <span>Notifications <span class="notif-count">{{ nb_alertes }}</span></span>
       <a href="{{ url_for('alerte') }}" class="notif-voir-tout">Voir tout</a>
     </div>
     <div class="notif-list">
@@ -260,13 +401,13 @@
         <div class="notif-item {% if not alerte.vue %}unread{% endif %}">
           <div class="notif-icon">
             {% if 'critique' in alerte.type_alerte %}
-              <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444"></i>
+              <i class="bi bi-exclamation-triangle-fill"></i>
             {% elif 'abandon' in alerte.type_alerte %}
-              <i class="bi bi-person-x-fill" style="color:#f59e0b"></i>
+              <i class="bi bi-person-x-fill"></i>
             {% elif 'echec' in alerte.type_alerte %}
-              <i class="bi bi-x-circle-fill" style="color:#ef4444"></i>
+              <i class="bi bi-x-circle-fill"></i>
             {% else %}
-              <i class="bi bi-info-circle-fill" style="color:#3b82f6"></i>
+              <i class="bi bi-info-circle-fill"></i>
             {% endif %}
           </div>
           <div class="notif-body">
@@ -283,6 +424,11 @@
         </div>
       {% endif %}
     </div>
+    {% if alertes_recentes %}
+    <div class="notif-footer">
+      <button type="button" id="notifMarkAllBtn">Tout marquer comme lu</button>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -333,6 +479,19 @@
       btn.setAttribute('aria-expanded', false);
     }
   });
+
+  const markAllBtn = document.getElementById('notifMarkAllBtn');
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', function() {
+      document.querySelectorAll('.notif-item.unread').forEach(item => {
+        item.classList.remove('unread');
+        const dot = item.querySelector('.notif-dot');
+        if (dot) dot.remove();
+      });
+      const badge = document.getElementById('notifBadge');
+      if (badge) badge.remove();
+    });
+  }
 })();
 </script>
 

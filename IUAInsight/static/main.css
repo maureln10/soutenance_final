@@ -41,7 +41,7 @@ a.notif-btn {
 }
 html, body {
   height: 100%;
-  font-family: 'Inter', sans-serif;      /* ✅ Inter → Poppins */
+  font-family: 'Inter', sans-serif;     
   font-size: 16px;
   font-weight: 500;
   color: var(--text-primary);

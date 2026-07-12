@@ -29,6 +29,15 @@ app.config['SQLALCHEMY_BINDS'] = {
     "dw":   os.getenv('DB_DW_URI'),
 }
 
+# 🔍 DEBUG TEMPORAIRE — à retirer une fois le problème résolu
+logging.basicConfig(level=logging.INFO)
+_debug_logger = logging.getLogger("startup-debug")
+_debug_logger.warning(f"DEBUG DB_APP_URI  = {os.getenv('DB_APP_URI')}")
+_debug_logger.warning(f"DEBUG DB_OLTP_URI = {os.getenv('DB_OLTP_URI')}")
+_debug_logger.warning(f"DEBUG DB_DW_URI   = {os.getenv('DB_DW_URI')}")
+_debug_logger.warning(f"DEBUG SQLALCHEMY_DATABASE_URI (config) = {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+_debug_logger.warning(f"DEBUG SQLALCHEMY_BINDS (config) = {app.config.get('SQLALCHEMY_BINDS')}")
+
 # ── Sécurité HTTPS + headers ───────────────────────────────
 Talisman(app,
     force_https=False,
